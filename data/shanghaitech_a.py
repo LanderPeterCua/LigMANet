@@ -40,10 +40,13 @@ class ShanghaiTechA(Dataset):
 
         if self.mode == 'train':
             self.image_path = osp.join(self.data_path, 'train', 'images', '%s')
+            self.target_path = osp.join(self.data_path, 'train', 'density maps', '%s')
         elif self.mode == 'val':
-            self.image_path = osp.join(self.data_path, 'val', '%s')
+            self.image_path = osp.join(self.data_path, 'val', 'images', '%s')
+            self.target_path = osp.join(self.data_path, 'val', 'density maps', '%s')
         elif self.mode == 'test':
-            self.image_path = osp.join(self.data_path, 'test', '%s')
+            self.image_path = osp.join(self.data_path, 'test', 'images', '%s')
+            self.target_path = osp.join(self.data_path, 'test', 'density maps', '%s')
 
         image_path = self.image_path % '*.jpg'
         images = glob.glob(image_path)
@@ -55,7 +58,7 @@ class ShanghaiTechA(Dataset):
         self.image_ids = self.ids
         self.targets = [i.replace('jpg', 'h5') for i in self.ids]
 
-        self.target_path = osp.join(self.data_path, 'train', 'density maps', '%s')
+        
 
     def __len__(self):
         """Returns number of data in the dataset

@@ -77,12 +77,12 @@ def get_loader(config):
                                 num_workers=4,
                                 pin_memory=True)
 
-        # elif config.mode == 'val' or config.mode == 'test' or config.mode == 'pred':
-        #     loader = DataLoader(dataset=dataset,
-        #                         batch_size=config.batch_size,
-        #                         shuffle=False,
-        #                         collate_fn=collate,
-        #                         num_workers=4,
-        #                         pin_memory=True)
+        elif config.mode == 'val' or config.mode == 'test' or config.mode == 'pred':
+            loader = DataLoader(dataset=dataset,
+                                batch_size=config.batch_size,
+                                shuffle=False,
+                                collate_fn=collate,
+                                num_workers=4,
+                                pin_memory=True)
 
     return loader, dataset.image_ids

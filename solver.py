@@ -368,21 +368,21 @@ class Solver(object):
                 
                 # generate copies of density maps as images 
                 # if difference between predicted and actual counts are bigger than 1
-                if self.fail_cases:
-                    t = targets[0].cpu().detach().numpy()
-                    o = output[0].cpu().detach().numpy()
+                # if self.fail_cases:
+                #     t = targets[0].cpu().detach().numpy()
+                #     o = output[0].cpu().detach().numpy()
 
-                    gt_count = round(np.sum(t))
-                    et_count = round(np.sum(o))
+                #     gt_count = round(np.sum(t))
+                #     et_count = round(np.sum(o))
 
-                    diff = abs(gt_count - et_count)
+                #     diff = abs(gt_count - et_count)
 
-                    if (diff > 0):
-                        save_plots(os.path.join(file_path, 'failure cases', str(diff)), output, targets, ids)
+                #     if (diff > 0):
+                #         save_plots(os.path.join(file_path, 'failure cases', str(diff)), output, targets, ids)
                 
                 # generate copies of density maps as images
-                if self.save_output_plots and i % save_freq == 0:
-                    save_plots(file_path, output, targets, ids)
+                # if self.save_output_plots and i % save_freq == 0:
+                #     save_plots(file_path, output, targets, ids)
 
                 # update MAE and MSE (summation part of the formula)
                 mae += abs(output.sum() - targets.sum()).item()

@@ -96,6 +96,7 @@ def main(version, config, output_txt, compile_txt):
     #     return
 
     data_loader, dataset_ids = get_loader(config)
+    print(data_loader)
     solver = Solver(version, data_loader, dataset_ids, vars(config), output_txt, compile_txt)
 
     if config.mode == 'train':
@@ -126,7 +127,7 @@ if __name__ == '__main__':
                         help='Momentum')
     parser.add_argument('--weight_decay', type=float, default= 0.0001,
                         help='Weight decay')
-    parser.add_argument('--num_epochs', type=int, default=400,
+    parser.add_argument('--num_epochs', type=int, default=10,
                         help='Number of epochs')
     parser.add_argument('--learning_sched', type=list, default=[],
                         help='List of epochs to reduce the learning rate')
@@ -135,9 +136,9 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='CSRNet',
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
-    # parser.add_argument('--pretrained_model', type=str,
-    #                     default=None,
-    #                     help='Pre-trained model')
+    parser.add_argument('--pretrained_model', type=str,
+                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-09 16_51_40.548283_train/10.pth',
+                        help='Pre-trained model')
     # parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
                         help='Toggles weight initialization')
@@ -145,7 +146,7 @@ if __name__ == '__main__':
     #                     help='Toggles identification of failure cases')
 
     # misc
-    parser.add_argument('--mode', type=str, default='train',
+    parser.add_argument('--mode', type=str, default='val',
                         choices=['train', 'val', 'test', 'pred'],
                         help='Mode of execution')
     parser.add_argument('--use_gpu', type=string_to_boolean, default=True,
@@ -204,35 +205,36 @@ if __name__ == '__main__':
         output_txt = os.path.join(path, '{}.txt'.format(version))
         compile_txt = os.path.join(path, 'COMPILED {} {}.txt'.format(args['model'], version))
 
-    # elif args['mode'] == 'val':
-    #     model = args['pretrained_model'].split('/')
-    #     version = '{}_test_{}'.format(model[-2], model[-1])
-    #     # pretrained/12-21-2022/2
-    #     args['model_test_path'] += '/' + '/'.join(model[:-1])
-    #     path = args['model_test_path']
-    #     # path = os.path.join(path, model[0])
-    #     output_txt = os.path.join(path, '{}.txt'.format(version))
-    #     compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
+    elif args['mode'] == 'val':
+        # C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-09 16_51_40.548283_train/10.pth
+        model = args['pretrained_model'].split('/')
+        version = '{}_test_{}'.format(model[-2], model[-1])
+        # pretrained/12-21-2022/2
+        # args['model_test_path'] += '/' + '/'.join(model[:-1])
+        path = ''.join(model[:-3]) + args['model_test_path']
+        # path = os.path.join(path, model[0])
+        output_txt = os.path.join(path, '{}.txt'.format(version))
+        compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
 
-    # elif args['mode'] == 'test':
-    #     model = args['pretrained_model'].split('/')
-    #     version = '{}_test_{}'.format(model[-2], model[-1])
+    elif args['mode'] == 'test':
+        model = args['pretrained_model'].split('/')
+        version = '{}_test_{}'.format(model[-2], model[-1])
         
-    #     args['model_test_path'] += '/' + '/'.join(model[:-1])
-    #     path = args['model_test_path']
-    #     # path = os.path.join(path, model[0])
-    #     output_txt = os.path.join(path, '{}.txt'.format(version))
-    #     compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
+        args['model_test_path'] += '/' + '/'.join(model[:-1])
+        path = args['model_test_path']
+        # path = os.path.join(path, model[0])
+        output_txt = os.path.join(path, '{}.txt'.format(version))
+        compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
 
-    # elif args['mode'] == 'pred':
-    #     model = args['pretrained_model'].split('/')
-    #     version = '{}_test_{}'.format(model[-2], model[-1])
+    elif args['mode'] == 'pred':
+        model = args['pretrained_model'].split('/')
+        version = '{}_test_{}'.format(model[-2], model[-1])
         
-    #     args['model_test_path'] += '/' + '/'.join(model[:-1])
-    #     path = args['model_test_path']
-    #     path = os.path.join(path, model[0])
-    #     output_txt = os.path.join(path, '{}.txt'.format(version))
-    #     compile_txt = os.path.join(path, 'COMPILED {} {}.txt'.format(args['model'], model[0]))
+        args['model_test_path'] += '/' + '/'.join(model[:-1])
+        path = args['model_test_path']
+        path = os.path.join(path, model[0])
+        output_txt = os.path.join(path, '{}.txt'.format(version))
+        compile_txt = os.path.join(path, 'COMPILED {} {}.txt'.format(args['model'], model[0]))
 
     # create folder and save copy of files
     mkdir(path)
