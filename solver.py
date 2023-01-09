@@ -7,13 +7,13 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from models.model import get_model
-from utils.utils import to_var, write_print, write_to_file, save_plots, get_amp_gt_by_value
+from utilities.utils import to_var, write_print, write_to_file, save_plots, get_amp_gt_by_value
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
                              f1_score, mean_squared_error, mean_absolute_error)
-from utils.timer import Timer
+from utilities.timer import Timer
 import numpy as np
 import torch.nn.functional as F
-from utils.marunet_losses import cal_avg_ms_ssim
+# from utilities.marunet_losses import cal_avg_ms_ssim
 
 class Solver(object):
 
@@ -44,9 +44,9 @@ class Solver(object):
 
         self.build_model()
 
-        # start with a pre-trained model
-        if self.pretrained_model:
-            self.load_pretrained_model()
+        # # start with a pre-trained model
+        # if self.pretrained_model:
+        #     self.load_pretrained_model()
 
         rand_seed = 64678  
         if rand_seed is not None:
@@ -63,9 +63,10 @@ class Solver(object):
         # instantiate model
         self.model_name = self.model
         self.model = get_model(self.model,
-                               self.imagenet_pretrain,
-                               self.model_save_path,
-                               self.input_channels)
+                               False,
+                            #    self.imagenet_pretrain,
+                               self.model_save_path)
+                            #    self.input_channels)
 
         # instantiate loss criterion
         # self.criterion = nn.MSELoss() 
@@ -77,7 +78,7 @@ class Solver(object):
         # else:
         #     self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
         #                             lr=self.lr)
-        if self.model_name == 'csrnet':
+        if self.model_name == 'CSRNet':
             self.optimizer = optim.SGD(self.model.parameters(), self.lr,
                                 momentum=self.momentum,
                                 weight_decay=self.weight_decay)
@@ -210,13 +211,10 @@ class Solver(object):
         self.optimizer.zero_grad()
 
         # forward pass
-        if self.model_name == 'MCNN':
-            output = self.model(images, targets)
-        else:
-            images = images.float()
-            output = self.model(images)
+        images = images.float()
+        output = self.model(images)
 
-        # if model is MARUNet or ConNet, prepare groundtruth attention maps
+        # if model is ConNet, prepare groundtruth attention maps
         if 'MARUNet' in self.model_name or 'ConNet' in self.model_name:
             if 'ConNet' in self.model_name:
                 _, output = output
@@ -225,12 +223,8 @@ class Solver(object):
             amp_gt = torch.stack(amp_gt).cuda()
             
         # compute loss
-        if self.model_name == 'MCNN':
-            self.model.loss.backward()
-            loss = self.model.loss.item()
-
-        # if model is MARUNet or ConNet
-        elif 'MARUNet' in self.model_name or 'ConNet' in self.model_name:
+        # if model is ConNet
+        if 'ConNet' in self.model_name:
             loss = 0
             target = 50 * targets[0].float().unsqueeze(1).cuda()
             

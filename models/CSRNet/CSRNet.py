@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 from torchvision import models
-from utils import save_net,load_net
+from models.CSRNet.utils import save_net,load_net
 
 class CSRNet(nn.Module):
     def __init__(self, load_weights=False):

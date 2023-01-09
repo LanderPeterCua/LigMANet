@@ -1,5 +1,5 @@
 import os
-from utils.utils import write_print, mkdir
+from utilities.utils import write_print, mkdir
 import argparse
 from solver import Solver
 from data.data_loader import get_loader
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # dataset info
-    parser.add_argument('--dataset', type=str, default='mall',
+    parser.add_argument('--dataset', type=str, default='shanghaitech-a',
                         choices=['shanghaitech-a', 'shanghaitech-b', 'ucf-cc-50', 'ucf-qnrf'],
                         help='Dataset to use')
     
@@ -132,8 +132,8 @@ if __name__ == '__main__':
                         help='List of epochs to reduce the learning rate')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size')
-    parser.add_argument('--model', type=str, default='csrnet',
-                        choices=['csrnet', 'can', 'man', 'connet'],
+    parser.add_argument('--model', type=str, default='CSRNet',
+                        choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     # parser.add_argument('--pretrained_model', type=str,
     #                     default=None,
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_test_path', type=str, default='./tests',
                         help='Path for saving test results')
 
-    # mall dataset
+    # ShanghaiTechA dataset
     parser.add_argument('--shanghaitech_a_path', type=str,
                         default='../Datasets/ShanghaiTechA/',
                         help='ShanghaiTech A dataset path')

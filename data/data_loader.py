@@ -1,9 +1,9 @@
 import torch
-from data.mall_dataset import MallDataset
+# from data.mall_dataset import MallDataset
 from data.shanghaitech_a import ShanghaiTechA
-from data.fdst import FDST
+# from data.fdst import FDST
 from torch.utils.data import DataLoader
-from data.augmentations import Augmentations, BaseTransform
+# from data.augmentations import Augmentations, BaseTransform
 
 def collate(batch):
     """Collate function used by the DataLoader"""
@@ -36,7 +36,7 @@ def get_loader(config):
     # targets_resize refers to how much the dimensions of the
     # target density map must be downscaled to match the output
     # size of the model used
-    if 'csrnet' in config.model:
+    if 'CSRNet' in config.model:
         targets_resize = 2 ** 3
     # elif config.model == 'MCNN':
     #     targets_resize = 2 ** 2
