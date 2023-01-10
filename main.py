@@ -127,7 +127,7 @@ if __name__ == '__main__':
                         help='Momentum')
     parser.add_argument('--weight_decay', type=float, default= 0.0001,
                         help='Weight decay')
-    parser.add_argument('--num_epochs', type=int, default=10,
+    parser.add_argument('--num_epochs', type=int, default=30,
                         help='Number of epochs')
     parser.add_argument('--learning_sched', type=list, default=[],
                         help='List of epochs to reduce the learning rate')
@@ -137,7 +137,7 @@ if __name__ == '__main__':
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='E:/School Files/Yr4Term2/Thesis/Pipeline/weights/CSRNet shanghaitech-a 2023-01-10 15_00_08.769001_train/10.pth',
+                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-10 17_35_58.055399_train/30.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
@@ -172,15 +172,15 @@ if __name__ == '__main__':
     parser.add_argument('--shanghaitech_a_path', type=str,
                         default='../Datasets/ShanghaiTechA/',
                         help='ShanghaiTech A dataset path')
-    # micc dataset
+    # ShanghaiTechB dataset
     parser.add_argument('--shanghaitech_b_path', type=str,
                         default='../Datasets/ShanghaiTechB/',
                         help='ShanghaiTech B dataset path')
-    # fdst dataset
+    # UCF_CC_50 dataset
     parser.add_argument('--ucf_cc_50_path', type=str,
                         default='../Datasets/UCF-CC-50/',
                         help='UCF-CC-50 dataset path')
-    # fdst dataset
+    # UCF_QNRF dataset
     parser.add_argument('--ucf_qnrf_path', type=str,
                         default='../Datasets/UCF-QNRF/',
                         help='UCF-QNRF dataset path')
