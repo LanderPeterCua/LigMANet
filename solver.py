@@ -407,15 +407,10 @@ class Solver(object):
         mae = 0
         mse = 0
 
-        if self.dataset == 'mall':
-            save_freq = 100
-        elif self.dataset == 'micc':
-            save_freq = 50
-        else:
-            save_freq = 1
+        save_freq = 1
 
         with torch.no_grad():
-            for i, (images, _) in enumerate(tqdm(data_loader)):
+            for i, (images, targets) in enumerate(tqdm(data_loader)):
                 images = to_var(images, self.use_gpu)
                 images = images.float()
 
@@ -425,14 +420,19 @@ class Solver(object):
 
                 ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
 
-                if 'MARUNet' in self.model_name or 'ConNet' in self.model_name:
+                if 'ConNet' in self.model_name:
                     output = output[0] / 50
 
                 model = self.pretrained_model.split('/')
                 file_path = os.path.join(self.model_test_path, '{} {} epoch {}'.format(self.model_name, self.dataset_info, self.get_epoch_num()))
+                file_path = "./" + file_path.replace('.pth', '')
 
                 if self.save_output_plots and i % save_freq == 0:
-                    save_plots(file_path, output, [], ids, pred=True)
+                    # prepare the groundtruth targets
+                    targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
+                    targets = torch.stack(targets)
+                    save_plots(file_path, output, targets, ids, save_label=True)
+                    # save_plots(file_path, output, [], ids, pred=True)
 
     def test(self):
         """

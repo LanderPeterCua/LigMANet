@@ -47,6 +47,10 @@ class ShanghaiTechA(Dataset):
         elif self.mode == 'test':
             self.image_path = osp.join(self.data_path, 'test', 'images', '%s')
             self.target_path = osp.join(self.data_path, 'test', 'density maps', '%s')
+        elif self.mode == 'pred':
+            # change path to pred instead of test
+            self.image_path = osp.join(self.data_path, 'test', 'images', '%s')
+            self.target_path = osp.join(self.data_path, 'test', 'density maps', '%s')
 
         image_path = self.image_path % '*.jpg'
         images = glob.glob(image_path)

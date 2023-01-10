@@ -137,16 +137,16 @@ if __name__ == '__main__':
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-09 16_51_40.548283_train/10.pth',
+                        default='E:/School Files/Yr4Term2/Thesis/Pipeline/weights/CSRNet shanghaitech-a 2023-01-10 15_00_08.769001_train/10.pth',
                         help='Pre-trained model')
-    # parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
+    parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
                         help='Toggles weight initialization')
     # parser.add_argument('--fail_cases', type=string_to_boolean, default=False,
     #                     help='Toggles identification of failure cases')
 
     # misc
-    parser.add_argument('--mode', type=str, default='val',
+    parser.add_argument('--mode', type=str, default='pred',
                         choices=['train', 'val', 'test', 'pred'],
                         help='Mode of execution')
     parser.add_argument('--use_gpu', type=string_to_boolean, default=True,
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     ############# FILE PATHS #############
     parser.add_argument('--model_save_path', type=str, default='./weights',
                         help='Path for saving weights')
-    parser.add_argument('--model_test_path', type=str, default='./tests',
+    parser.add_argument('--model_test_path', type=str, default='/tests',
                         help='Path for saving test results')
 
     # ShanghaiTechA dataset
@@ -211,7 +211,7 @@ if __name__ == '__main__':
         version = '{}_test_{}'.format(model[-2], model[-1])
         # pretrained/12-21-2022/2
         # args['model_test_path'] += '/' + '/'.join(model[:-1])
-        path = ''.join(model[:-3]) + args['model_test_path']
+        path = '/'.join(model[:-3]) + args['model_test_path']
         # path = os.path.join(path, model[0])
         output_txt = os.path.join(path, '{}.txt'.format(version))
         compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
@@ -220,8 +220,8 @@ if __name__ == '__main__':
         model = args['pretrained_model'].split('/')
         version = '{}_test_{}'.format(model[-2], model[-1])
         
-        args['model_test_path'] += '/' + '/'.join(model[:-1])
-        path = args['model_test_path']
+        # args['model_test_path'] += '/' + '/'.join(model[:-1])
+        path = '/'.join(model[:-3]) + args['model_test_path']
         # path = os.path.join(path, model[0])
         output_txt = os.path.join(path, '{}.txt'.format(version))
         compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
@@ -230,8 +230,9 @@ if __name__ == '__main__':
         model = args['pretrained_model'].split('/')
         version = '{}_test_{}'.format(model[-2], model[-1])
         
-        args['model_test_path'] += '/' + '/'.join(model[:-1])
-        path = args['model_test_path']
+        # args['model_test_path'] += '/' + '/'.join(model[:-1])
+        path = '/'.join(model[:-3]) + args['model_test_path']
+        # path = args['model_test_path']
         path = os.path.join(path, model[0])
         output_txt = os.path.join(path, '{}.txt'.format(version))
         compile_txt = os.path.join(path, 'COMPILED {} {}.txt'.format(args['model'], model[0]))
