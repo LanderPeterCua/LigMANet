@@ -13,7 +13,7 @@ from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
 from utilities.timer import Timer
 import numpy as np
 import torch.nn.functional as F
-# from utilities.marunet_losses import cal_avg_ms_ssim
+from utilities.marunet_losses import cal_avg_ms_ssim
 
 class Solver(object):
 
@@ -63,8 +63,7 @@ class Solver(object):
         # instantiate model
         self.model_name = self.model
         self.model = get_model(self.model,
-                               False,
-                            #    self.imagenet_pretrain,
+                               self.imagenet_pretrain,
                                self.model_save_path)
                             #    self.input_channels)
 
@@ -79,23 +78,18 @@ class Solver(object):
         #     self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
         #                             lr=self.lr)
         if self.model_name == 'CSRNet':
-            self.optimizer = optim.SGD(self.model.parameters(), self.lr,
-                                momentum=self.momentum,
-                                weight_decay=self.weight_decay)
+            self.optimizer = optim.SGD(self.model.parameters(), self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
         # elif self.model_name == 'man':
         #     self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         elif self.model_name == 'CAN':
             if self.dataset_info == 'shanghaitech-b':
-                self.optimizer = optim.Adam(self.model.parameters(), self.lr,
-                                    weight_decay=self.weight_decay)
+                self.optimizer = optim.Adam(self.model.parameters(), self.lr, weight_decay=self.weight_decay)
 
             elif self.dataset_info == 'shanghaitech-a' or self.dataset_info == 'ucf-cc-50' or self.dataset_info == 'ucf-qnrf':
-                self.optimizer = optim.SGD(self.model.parameters(), self.lr,
-                                    momentum=self.momentum,
-                                    weight_decay=self.weight_decay)
-        # elif self.model_name == 'connet':
-        #     self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
-        #                             lr=self.lr)
+                self.optimizer = optim.SGD(self.model.parameters(), self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
+        elif self.model_name == 'ConNet':
+            self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),lr=self.lr)
+            # self.optimizer = optim.Adam(self.model.parameters(), lr = self.lr, weight_decay = self.weight_decay)
 
         # print network
         self.print_network(self.model, self.model_name)
@@ -126,28 +120,28 @@ class Solver(object):
                     'The number of parameters: {}'.format(num_params))
 
     # TODO
-    # def load_pretrained_model(self):
-    #     """
-    #     loads a pre-trained model from a .pth or .pth.tar file
-    #     """
+    def load_pretrained_model(self):
+        """
+        loads a pre-trained model from a .pth or .pth.tar file
+        """
 
-    #     # if pretrained model is a .pth file, load weights directly
-    #     if ".pth.tar" not in self.pretrained_model:
-    #         self.pretrained_model = self.pretrained_model.replace('.pth', '')
-    #         self.model.load_state_dict(torch.load(os.path.join(
-    #             self.model_save_path, '{}.pth'.format(self.pretrained_model))), strict=False)
+        # if pretrained model is a .pth file, load weights directly
+        if ".pth.tar" not in self.pretrained_model:
+            self.pretrained_model = self.pretrained_model.replace('.pth', '')
+            self.model.load_state_dict(torch.load(os.path.join(
+                self.model_save_path, '{}.pth'.format(self.pretrained_model))), strict=False)
         
-    #     # if pretrained model is a .pth.tar file, load weights stored in 'state_dict' and 'optimizer' keys
-    #     else:
-    #         weights = torch.load(os.path.join(
-    #             self.model_save_path, '{}'.format(self.pretrained_model)))
-    #         self.model.load_state_dict(weights['state_dict'], strict=False)
+        # if pretrained model is a .pth.tar file, load weights stored in 'state_dict' and 'optimizer' keys
+        else:
+            weights = torch.load(os.path.join(
+                self.model_save_path, '{}'.format(self.pretrained_model)))
+            self.model.load_state_dict(weights['state_dict'], strict=False)
 
-    #         if self.mode == 'train' and 'optimizer' in weights.keys():
-    #             self.optimizer.load_state_dict(weights['optimizer'])
+            if self.mode == 'train' and 'optimizer' in weights.keys():
+                self.optimizer.load_state_dict(weights['optimizer'])
 
-    #     write_print(self.output_txt,
-    #                 'loaded trained model {}'.format(self.pretrained_model))
+        write_print(self.output_txt,
+                    'loaded trained model {}'.format(self.pretrained_model))
 
     def print_loss_log(self, start_time, iters_per_epoch, e, i, loss):
         """
@@ -366,8 +360,8 @@ class Solver(object):
                 elapsed += timer.toc(average=False)
 
                 # if model is MARUNet, divide output by 50 as designed by original proponents
-                # if 'MARUNet' in self.model_name or 'ConNet' in self.model_name:
-                #     output = output[0] / 50
+                if 'MARUNet' in self.model_name or 'ConNet' in self.model_name:
+                    output = output[0] / 50
 
                 ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
                 model = self.pretrained_model.split('/')
@@ -391,7 +385,12 @@ class Solver(object):
                 # if self.save_output_plots and i % save_freq == 0:
                 #     save_plots(file_path, output, targets, ids)
 
+                
                 # update MAE and MSE (summation part of the formula)
+                # mae += abs(output.sum() - targets.sum()).item()
+                # mse += ((targets.sum() - output.sum())*(targets.sum() - output.sum())).item()
+                
+                # output = torch.stack(output, dim=0).sum(dim=0)
                 mae += abs(output.sum() - targets.sum()).item()
                 mse += ((targets.sum() - output.sum())*(targets.sum() - output.sum())).item()
 

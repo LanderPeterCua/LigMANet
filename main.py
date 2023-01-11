@@ -133,15 +133,18 @@ if __name__ == '__main__':
                         help='List of epochs to reduce the learning rate')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size')
-    parser.add_argument('--model', type=str, default='CAN',
+    parser.add_argument('--model', type=str, default='ConNet',
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='E:/School Files/Yr4Term2/Thesis/Pipeline/weights/CAN shanghaitech-a 2023-01-11 14_19_17.914099_train/30.pth',
+                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/ConNet shanghaitech-a 2023-01-11 17_36_52.263783_train/30.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
                         help='Toggles weight initialization')
+    parser.add_argument('--imagenet_pretrain', type=string_to_boolean,
+                        default=False,
+                        help='Toggles pretrained weights for vision models')
     # parser.add_argument('--fail_cases', type=string_to_boolean, default=False,
     #                     help='Toggles identification of failure cases')
 
@@ -161,6 +164,31 @@ if __name__ == '__main__':
     # parser.add_argument('--brightness_change', type=float, default=0)
     # parser.add_argument('--resolution_scale', type=float, default=1)
     # parser.add_argument('--outdoor', type=string_to_boolean, default=False)
+    
+    # ############# COMPRESSION #############
+
+    # parser.add_argument('--use_compress', type=string_to_boolean, default='false',
+    #                     help='Toggles execution of compression technique')
+    # parser.add_argument('--compression', type=str, default='musco',
+    #                     choices=['skt', 'musco'],
+    #                     help='Compression technique to use if use_compress is true')
+    # parser.add_argument('--weights_json_path', type=str, default='best_models.json')
+
+    # # musco
+    # parser.add_argument('--musco_layers_to_compress', type=str, default='')
+    # parser.add_argument('--musco_ft_every', type=float, default=10)
+    # parser.add_argument('--musco_iters', type=int, default=5)
+    # parser.add_argument('--musco_ft_epochs', type=int, default=10)
+    # parser.add_argument('--musco_ft_checkpoint', type=int, default=1)
+    # parser.add_argument('--musco_ft_only', type=string_to_boolean, default="false")
+
+    # # skt
+    # parser.add_argument('--skt_student_ckpt', type=str, default=None)
+    # parser.add_argument('--skt_num_epochs', type=int, default=1000)
+    # parser.add_argument('--skt_lamb_fsp', type=float, default=0.5)
+    # parser.add_argument('--skt_lamb_cos', type=float, default=0.5)
+    # parser.add_argument('--skt_print_freq', type=int, default=200)
+    # parser.add_argument('--skt_save_freq', type=int, default=0)
 
     ############# FILE PATHS #############
     parser.add_argument('--model_save_path', type=str, default='./weights',
