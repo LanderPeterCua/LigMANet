@@ -3,6 +3,7 @@ import os
 import torch.nn as nn
 
 from models.CSRNet.CSRNet import CSRNet
+from models.CAN.CAN import CANNet
 # from models.CSRNet.model_student_vgg import CSRNet as CSRNetSKT
 
 # from models.MCNN.network import weights_normal_init
@@ -55,6 +56,9 @@ def get_model(model_config,
 
     if model_config == "CSRNet":
         model = CSRNet()
+
+    elif model_config == "CAN":
+        model = CANNet()
 
     # if model_config == "ConNet_mall" or model_config == "ConNet_04":
     #     model = ConNet_mall(transform=mode.lower() == "train")

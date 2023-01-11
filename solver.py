@@ -84,15 +84,22 @@ class Solver(object):
                                 weight_decay=self.weight_decay)
         # elif self.model_name == 'man':
         #     self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        # elif self.model_name == 'can':
-        #     self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
-        #                             lr=self.lr)
+        elif self.model_name == 'CAN':
+            if self.dataset_info == 'shanghaitech-b':
+                self.optimizer = optim.Adam(self.model.parameters(), self.lr,
+                                    weight_decay=self.weight_decay)
+
+            elif self.dataset_info == 'shanghaitech-a' or self.dataset_info == 'ucf-cc-50' or self.dataset_info == 'ucf-qnrf':
+                self.optimizer = optim.SGD(self.model.parameters(), self.lr,
+                                    momentum=self.momentum,
+                                    weight_decay=self.weight_decay)
         # elif self.model_name == 'connet':
         #     self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
         #                             lr=self.lr)
 
         # print network
         self.print_network(self.model, self.model_name)
+        print(self.optimizer)
 
         # use gpu if enabled
         if torch.cuda.is_available() and self.use_gpu:

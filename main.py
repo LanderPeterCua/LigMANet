@@ -133,11 +133,11 @@ if __name__ == '__main__':
                         help='List of epochs to reduce the learning rate')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size')
-    parser.add_argument('--model', type=str, default='CSRNet',
+    parser.add_argument('--model', type=str, default='CAN',
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-10 17_35_58.055399_train/30.pth',
+                        default='E:/School Files/Yr4Term2/Thesis/Pipeline/weights/CAN shanghaitech-a 2023-01-11 14_19_17.914099_train/30.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,

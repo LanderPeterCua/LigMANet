@@ -4,6 +4,7 @@ from data.shanghaitech_a import ShanghaiTechA
 # from data.fdst import FDST
 from torch.utils.data import DataLoader
 # from data.augmentations import Augmentations, BaseTransform
+import numpy as np
 
 def collate(batch):
     """Collate function used by the DataLoader"""
@@ -12,7 +13,8 @@ def collate(batch):
     targets = []
     for sample in batch:
         images.append(sample[0])
-        targets.append(torch.FloatTensor(sample[1]))
+        # converted to float 32 to resolve type error
+        targets.append(torch.FloatTensor(np.float32(sample[1])))
     return torch.stack(images, 0), targets
 
 
@@ -37,6 +39,8 @@ def get_loader(config):
     # target density map must be downscaled to match the output
     # size of the model used
     if 'CSRNet' in config.model:
+        targets_resize = 2 ** 3
+    elif 'CAN' in config.model:
         targets_resize = 2 ** 3
     # elif config.model == 'MCNN':
     #     targets_resize = 2 ** 2
