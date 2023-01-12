@@ -5,6 +5,7 @@ import torch.nn as nn
 from models.CSRNet.CSRNet import CSRNet
 from models.CAN.CAN import CANNet
 from models.ConNet.ConNet import ConNet
+from models.MAN.MAN import MAN
 # from models.CSRNet.model_student_vgg import CSRNet as CSRNetSKT
 
 # from models.MCNN.network import weights_normal_init
@@ -38,6 +39,21 @@ def init_weights(model, classifier_only=False):
             nn.init.normal_(module.weight, mean=0, std=0.01)
             nn.init.constant_(module.bias, val=0)
 
+# used for MAN
+def make_layers(cfg, batch_norm=False):
+    layers = []
+    in_channels = 3
+    for v in cfg:
+        if v == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        else:
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+            if batch_norm:
+                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+            else:
+                layers += [conv2d, nn.ReLU(inplace=True)]
+            in_channels = v
+    return nn.Sequential(*layers)
 
 # def load_pretrained_model(model, model_save_path, pretrained_model):
 #     """
@@ -63,6 +79,13 @@ def get_model(model_config,
 
     elif model_config == "ConNet":
         model = ConNet(transform=mode.lower() == "train")
+    
+    elif model_config == "MAN":
+        cfg = {
+    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M']
+              }
+
+        model = MAN(make_layers(cfg['E']))
 
     # if model_config == "ConNet_mall" or model_config == "ConNet_04":
     #     model = ConNet_mall(transform=mode.lower() == "train")

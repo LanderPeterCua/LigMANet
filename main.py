@@ -127,17 +127,17 @@ if __name__ == '__main__':
                         help='Momentum')
     parser.add_argument('--weight_decay', type=float, default= 0.0001,
                         help='Weight decay')
-    parser.add_argument('--num_epochs', type=int, default=30,
+    parser.add_argument('--num_epochs', type=int, default=2,
                         help='Number of epochs')
     parser.add_argument('--learning_sched', type=list, default=[],
                         help='List of epochs to reduce the learning rate')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size')
-    parser.add_argument('--model', type=str, default='ConNet',
+    parser.add_argument('--model', type=str, default='MAN',
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/ConNet shanghaitech-a 2023-01-11 17_36_52.263783_train/30.pth',
+                        default='C:/Users/hylen/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-11 17_36_52.263783_train/30.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     #                     help='Toggles identification of failure cases')
 
     # misc
-    parser.add_argument('--mode', type=str, default='pred',
+    parser.add_argument('--mode', type=str, default='train',
                         choices=['train', 'val', 'test', 'pred'],
                         help='Mode of execution')
     parser.add_argument('--use_gpu', type=string_to_boolean, default=True,
@@ -234,7 +234,7 @@ if __name__ == '__main__':
         compile_txt = os.path.join(path, 'COMPILED {} {}.txt'.format(args['model'], version))
 
     elif args['mode'] == 'val':
-        # C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-09 16_51_40.548283_train/10.pth
+        # C:/Users/hylen/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-09 16_51_40.548283_train/10.pth
         model = args['pretrained_model'].split('/')
         version = '{}_test_{}'.format(model[-2], model[-1])
         # pretrained/12-21-2022/2

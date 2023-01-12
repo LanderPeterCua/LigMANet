@@ -90,7 +90,9 @@ class Solver(object):
         elif self.model_name == 'ConNet':
             self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),lr=self.lr)
             # self.optimizer = optim.Adam(self.model.parameters(), lr = self.lr, weight_decay = self.weight_decay)
-
+        elif self.model_name == 'MAN':
+            self.optimizer = optim.Adam(self.model.parameters(), self.lr, weight_decay=self.weight_decay)
+        
         # print network
         self.print_network(self.model, self.model_name)
         print(self.optimizer)
@@ -224,8 +226,8 @@ class Solver(object):
             amp_gt = torch.stack(amp_gt).cuda()
             
         # compute loss
-        # if model is ConNet
-        if 'ConNet' in self.model_name:
+        # if model is ConNet 
+        if 'ConNet' in self.model_name or 'MAN' in self.model_name:
             loss = 0
             target = 50 * targets[0].float().unsqueeze(1).cuda()
             
@@ -249,6 +251,8 @@ class Solver(object):
             loss.backward()
         else:
             # compute loss using MSE loss function
+            print(output[0].shape)
+            print(targets[0].shape)
             loss = self.criterion(output.squeeze(), targets.squeeze())
             
             # compute gradients using back propagation
@@ -359,8 +363,8 @@ class Solver(object):
                 output = self.model(images)
                 elapsed += timer.toc(average=False)
 
-                # if model is MARUNet, divide output by 50 as designed by original proponents
-                if 'MARUNet' in self.model_name or 'ConNet' in self.model_name:
+                # if model is ConNet, divide output by 50 as designed by original proponents
+                if 'ConNet' in self.model_name:
                     output = output[0] / 50
 
                 ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
