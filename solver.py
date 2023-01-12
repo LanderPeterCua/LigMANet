@@ -14,6 +14,9 @@ from utilities.timer import Timer
 import numpy as np
 import torch.nn.functional as F
 from utilities.marunet_losses import cal_avg_ms_ssim
+from losses.post_prob import Post_Prob
+from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
 
 class Solver(object):
 
@@ -197,7 +200,15 @@ class Solver(object):
             'optimizer': copy.deepcopy(self.optimizer.state_dict())
             }, path)
 
-    def model_step(self, images, targets, epoch):
+    def train_collate(batch):
+        transposed_batch = list(zip(*batch))
+        images = torch.stack(transposed_batch[0], 0)
+        points = transposed_batch[1]  # the number of points is not fixed, keep it as a list of tensor
+        targets = transposed_batch[2]
+        st_sizes = torch.FloatTensor(transposed_batch[3])
+        return images, points, targets, st_sizes
+
+    def model_step(self, images, targets, epoch, points, st_sizes):
         """
         A step for each iteration
         
@@ -227,7 +238,7 @@ class Solver(object):
             
         # compute loss
         # if model is ConNet 
-        if 'ConNet' in self.model_name or 'MAN' in self.model_name:
+        if 'ConNet' in self.model_name:
             loss = 0
             target = 50 * targets[0].float().unsqueeze(1).cuda()
             
@@ -249,12 +260,31 @@ class Solver(object):
 
             # compute gradients using back propagation
             loss.backward()
+        elif 'MAN' in self.model_name:
+            with torch.set_grad_enabled(True):
+                output, features = self.model(images)
+                # compute loss using MSE loss function\
+                self.post_prob = Post_Prob(self.sigma,
+                                    self.crop_size,
+                                    self.downsample_ratio,
+                                    self.background_ratio,
+                                    self.use_background,
+                                    self.device)
+                # outputs, features = self.model(images)
+                prob_list = self.post_prob(points, st_sizes)
+                loss = self.criterion(prob_list, targets, output)
+                loss_c = 0
+                for feature in features:
+                    mean_feature = torch.mean(feature, dim=0)
+                    mean_sum = torch.sum(mean_feature**2)**0.5
+                    cosine = 1 - torch.sum(feature*mean_feature, dim=1) / (mean_sum * torch.sum(feature**2, dim=1)**0.5 + 1e-5)
+                    loss_c += torch.sum(cosine)
+                loss += loss_c
+
+            loss.backward()
         else:
-            # compute loss using MSE loss function
-            print(output[0].shape)
-            print(targets[0].shape)
             loss = self.criterion(output.squeeze(), targets.squeeze())
-            
+        
             # compute gradients using back propagation
             loss.backward()
 
@@ -294,34 +324,69 @@ class Solver(object):
         start = 0
         # start training
         start_time = time.time()
-        for e in range(start, self.num_epochs):
-            for i, (images, targets) in enumerate(tqdm(self.data_loader)):
-                # prepare input images
-                images = to_var(images, self.use_gpu)
+        if 'MAN' in self.model_name:
+            for e in range(start, self.num_epochs):
+                for i, (images, targets, points, st_sizes) in enumerate(tqdm(self.data_loader['train'])):
+                    # prepare input images
+                    images = to_var(images, self.use_gpu)
 
-                # prepare groundtruth targets
-                targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
-                targets = torch.stack(targets)
+                    # prepare groundtruth targets
+                    targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
+                    targets = torch.stack(targets)
 
-                # train model and get loss
-                loss = self.model_step(images, targets, e)
+                    # train model and get loss
+                    print("HERE" + str(type(images)))
+                    images = images.to(self.device)
+                    st_sizes = st_sizes.to(self.device)
+                    points = [p.to(self.device) for p in points]
+                    targets = [t.to(self.device) for t in targets]
 
-            # print out loss log
-            if (e + 1) % self.loss_log_step == 0:
-                self.print_loss_log(start_time, iters_per_epoch, e, i, loss)
-                self.losses.append((e, loss))
+                    loss = self.model_step(images, targets, e, points, st_sizes)
 
-            # save model
-            if (e + 1) % self.model_save_step == 0:
-                self.save_model(e)
+                # print out loss log
+                if (e + 1) % self.loss_log_step == 0:
+                    self.print_loss_log(start_time, iters_per_epoch, e, i, loss)
+                    self.losses.append((e, loss))
 
-            # update learning rate based on learning schedule
-            num_sched = len(self.learning_sched)
-            if num_sched != 0 and sched < num_sched:
-                if (e + 1) in self.learning_sched:
-                    self.lr /= 10
-                    print('Learning rate reduced to', self.lr)
-                    sched += 1
+                # save model
+                if (e + 1) % self.model_save_step == 0:
+                    self.save_model(e)
+
+                # update learning rate based on learning schedule
+                num_sched = len(self.learning_sched)
+                if num_sched != 0 and sched < num_sched:
+                    if (e + 1) in self.learning_sched:
+                        self.lr /= 10
+                        print('Learning rate reduced to', self.lr)
+                        sched += 1
+        else:
+            for e in range(start, self.num_epochs):
+                for i, (images, targets) in enumerate(tqdm(self.data_loader)):
+                    # prepare input images
+                    images = to_var(images, self.use_gpu)
+
+                    # prepare groundtruth targets
+                    targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
+                    targets = torch.stack(targets)
+
+                    loss = self.model_step(images, targets, e)
+
+                # print out loss log
+                if (e + 1) % self.loss_log_step == 0:
+                    self.print_loss_log(start_time, iters_per_epoch, e, i, loss)
+                    self.losses.append((e, loss))
+
+                # save model
+                if (e + 1) % self.model_save_step == 0:
+                    self.save_model(e)
+
+                # update learning rate based on learning schedule
+                num_sched = len(self.learning_sched)
+                if num_sched != 0 and sched < num_sched:
+                    if (e + 1) in self.learning_sched:
+                        self.lr /= 10
+                        print('Learning rate reduced to', self.lr)
+                        sched += 1
 
         # print losses
         write_print(self.output_txt, '\n--Losses--')

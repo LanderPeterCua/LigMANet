@@ -137,7 +137,7 @@ if __name__ == '__main__':
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/hylen/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-11 17_36_52.263783_train/30.pth',
+                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-11 17_36_52.263783_train/30.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
@@ -158,6 +158,37 @@ if __name__ == '__main__':
     # epoch step size
     parser.add_argument('--loss_log_step', type=int, default=5)
     parser.add_argument('--model_save_step', type=int, default=5)
+
+    # for MAN only
+    parser.add_argument('--save-all', type=bool, default=False,
+                        help='whether to save all best model')
+    parser.add_argument('--resume', default='',
+                        help='the path of resume training model')
+    parser.add_argument('--max-model-num', type=int, default=1,
+                        help='max models num to save ')
+    #parser.add_argument('--val-epoch', type=int, default=5,
+    #                    help='the num of steps to log training information')
+    parser.add_argument('--val-start', type=int, default=600,
+                        help='the epoch start to val')
+    parser.add_argument('--batch-size', type=int, default=1,
+                        help='train batch size')
+    parser.add_argument('--device', help='assign device')
+    parser.add_argument('--num-workers', type=int, default=8,
+                        help='the num of training process')
+
+    parser.add_argument('--is-gray', type=bool, default=True,
+                        help='whether the input image is gray')
+    parser.add_argument('--crop-size', type=int, default=256,
+                        help='the crop size of the train image')
+    parser.add_argument('--downsample-ratio', type=int, default=16,
+                        help='downsample ratio')
+
+    parser.add_argument('--use-background', type=bool, default=True,
+                        help='whether to use background modelling')
+    parser.add_argument('--sigma', type=float, default=8.0,
+                        help='sigma for likelihood')
+    parser.add_argument('--background-ratio', type=float, default=0.15,
+                        help='background ratio')
 
     # for experiments
     # parser.add_argument('--augment_exp', type=string_to_boolean, default=False)

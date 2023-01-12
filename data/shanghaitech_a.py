@@ -57,7 +57,7 @@ class ShanghaiTechA(Dataset):
         image_path = self.image_path % '*.jpg'
         images = glob.glob(image_path)
 
-        print("Image Count: " + str(len(images)))
+        # print("Image Count: " + str(len(images)))
         
         if platform == "win32" or platform == "win64":
             self.ids = [img[img.rfind('\\') + 1:] for img in images]
