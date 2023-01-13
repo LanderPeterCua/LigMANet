@@ -554,75 +554,74 @@ class Solver(object):
         Arguments:
             data_loader {DataLoader} -- DataLoader of the dataset to be used
         """
+        self.best_mae = np.inf
+        self.best_mse = np.inf
+        self.save_all = self.save_all
+        self.best_count = 0
+        epoch_start = time.time()
+        self.model.eval()  # Set model to evaluate mode
+        epoch_res = []
+        # Iterate over data.
+        for inputs, count, name in self.data_loader:
+            inputs = inputs.to(self.device)
+            # inputs are images with different sizes
+            b, c, h, w = inputs.shape
+            h, w = int(h), int(w)
+            assert b == 1, 'the batch size should equal to 1 in validation mode'
+            input_list = []
+            if h >= 3584 or w >= 3584:
+                h_stride = int(np.ceil(1.0 * h / 3584))
+                w_stride = int(np.ceil(1.0 * w / 3584))
+                h_step = h // h_stride
+                w_step = w // w_stride
+                for i in range(h_stride):
+                    for j in range(w_stride):
+                        h_start = i * h_step
+                        if i != h_stride - 1:
+                            h_end = (i + 1) * h_step
+                        else:
+                            h_end = h
+                        w_start = j * w_step
+                        if j != w_stride - 1:
+                            w_end = (j + 1) * w_step
+                        else:
+                            w_end = w
+                        input_list.append(inputs[:, :, h_start:h_end, w_start:w_end])
+                with torch.set_grad_enabled(False):
+                    pre_count = 0.0
+                    for idx, input in enumerate(input_list):
+                        output = self.model(input)[0]
+                        pre_count += torch.sum(output)
+                res = count[0].item() - pre_count.item()
+                epoch_res.append(res)
+            else:
+                with torch.set_grad_enabled(False):
+                    outputs = self.model(inputs)[0]
+                    # save_results(inputs, outputs, self.vis_dir, '{}.jpg'.format(name[0]))
+                    res = count[0].item() - torch.sum(outputs).item()
+                    epoch_res.append(res)
 
-        # set the model to eval mode
-        self.model.eval()
+        epoch_res = np.array(epoch_res)
+        mse = np.sqrt(np.mean(np.square(epoch_res)))
+        mae = np.mean(np.abs(epoch_res))
+        logging.info('Val, MSE: {:.2f} MAE: {:.2f}, Cost {:.1f} sec'
+                     .format(mse, mae, time.time()-epoch_start))
 
-        timer = Timer()
-        elapsed = 0
-        mae = 0
-        mse = 0
+        model_state_dic = self.model.state_dict()
+        logging.info("best mse {:.2f} mae {:.2f}".format(self.best_mse, self.best_mae))
+        if (2.0 * mse + mae) < (2.0 * self.best_mse + self.best_mae):
+            self.best_mse = mse
+            self.best_mae = mae
+            logging.info("save best mse {:.2f} mae {:.2f}".format(self.best_mse,
+                                                                                 self.best_mae
+                                                                                 ))
+            if self.save_all:
+                torch.save(model_state_dic, os.path.join(self.model_save_path, 'best_model_{}.pth'.format(self.best_count)))
+                self.best_count += 1
+            else:
+                torch.save(model_state_dic, os.path.join(self.model_save_path, 'best_model.pth'))
 
-        # predetermined save frequency of density maps
-        save_freq = 100
-
-        # begin evaluating on the dataset
-        with torch.no_grad():
-            for i, (images, targets) in enumerate(tqdm(data_loader)):
-                # prepare the input images
-                images = to_var(images, self.use_gpu)
-                images = images.float()
-
-                # prepare the groundtruth targets
-                targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
-                targets = torch.stack(targets)
-                
-                # generate output of model
-                timer.tic()
-                output = self.model(images)
-                elapsed += timer.toc(average=False)
-
-                # if model is ConNet, divide output by 50 as designed by original proponents
-                if 'ConNet' in self.model_name:
-                    output = output[0] / 50
-
-                ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
-                model = self.pretrained_model.split('/')
-                file_path = os.path.join(self.model_test_path, self.dataset_info + ' epoch ' + self.get_epoch_num())
-                
-                # generate copies of density maps as images 
-                # if difference between predicted and actual counts are bigger than 1
-                # if self.fail_cases:
-                #     t = targets[0].cpu().detach().numpy()
-                #     o = output[0].cpu().detach().numpy()
-
-                #     gt_count = round(np.sum(t))
-                #     et_count = round(np.sum(o))
-
-                #     diff = abs(gt_count - et_count)
-
-                #     if (diff > 0):
-                #         save_plots(os.path.join(file_path, 'failure cases', str(diff)), output, targets, ids)
-                
-                # generate copies of density maps as images
-                # if self.save_output_plots and i % save_freq == 0:
-                #     save_plots(file_path, output, targets, ids)
-
-                
-                # update MAE and MSE (summation part of the formula)
-                # mae += abs(output.sum() - targets.sum()).item()
-                # mse += ((targets.sum() - output.sum())*(targets.sum() - output.sum())).item()
-                
-                # output = torch.stack(output, dim=0).sum(dim=0)
-                mae += abs(output.sum() - targets.sum()).item()
-                mse += ((targets.sum() - output.sum())*(targets.sum() - output.sum())).item()
-
-        # compute for MAE, MSE and FPS
-        mae = mae / len(data_loader)
-        mse = np.sqrt(mse / len(data_loader))
-        fps = len(data_loader) / elapsed
-
-        return mae, mse, fps
+        return mae, mse, 0.0
 
     def pred(self):
 
@@ -638,30 +637,98 @@ class Solver(object):
 
         save_freq = 1
 
-        with torch.no_grad():
-            for i, (images, targets) in enumerate(tqdm(data_loader)):
-                images = to_var(images, self.use_gpu)
-                images = images.float()
+        if 'MAN' in self.model_name:
+            # os.environ['CUDA_VISIBLE_DEVICES'] = self.device.strip()  # set vis gpu
 
-                timer.tic()
-                output = self.model(images)
-                elapsed += timer.toc(average=False)
+            device = torch.device('cuda')
+            model = vgg_c.vgg19_trans()
+            model.to(device)
+            model.eval()
 
+            model.load_state_dict(torch.load(self.pretrained_model, device))
+            epoch_minus = []
+            for i, (inputs, count, name) in enumerate(tqdm(data_loader)):
                 ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
+                print(ids)
+                inputs = inputs.to(device)
+                b, c, h, w = inputs.shape
+                h, w = int(h), int(w)
+                assert b == 1, 'the batch size should equal to 1 in validation mode'
+                input_list = []
+                if h >= 3584 or w >= 3584:
+                    h_stride = int(np.math.ceil(1.0 * h / 3584))
+                    w_stride = int(np.math.ceil(1.0 * w / 3584))
+                    h_step = h // h_stride
+                    w_step = w // w_stride
+                    for i in range(h_stride):
+                        for j in range(w_stride):
+                            h_start = i * h_step
+                            if i != h_stride - 1:
+                                h_end = (i + 1) * h_step
+                            else:
+                                h_end = h
+                            w_start = j * w_step
+                            if j != w_stride - 1:
+                                w_end = (j + 1) * w_step
+                            else:
+                                w_end = w
+                            input_list.append(inputs[:, :, h_start:h_end, w_start:w_end])
+                    with torch.set_grad_enabled(False):
+                        pre_count = 0.0
+                        for idx, input in enumerate(input_list):
+                            output = model(input)[0]
+                            pre_count += torch.sum(output)
+                    res = count[0].item() - pre_count.item()
+                    epoch_minus.append(res)
+                else:
+                    with torch.set_grad_enabled(False):
+                        outputs = model(inputs)[0]
+                        res = count[0].item() - torch.sum(outputs).item()
+                        epoch_minus.append(res)
 
-                if 'ConNet' in self.model_name:
-                    output = output[0] / 50
-
-                model = self.pretrained_model.split('/')
                 file_path = os.path.join(self.model_test_path, '{} {} epoch {}'.format(self.model_name, self.dataset_info, self.get_epoch_num()))
                 file_path = "./" + file_path.replace('.pth', '')
 
                 if self.save_output_plots and i % save_freq == 0:
                     # prepare the groundtruth targets
-                    targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
+                    targets = [to_var(torch.Tensor(x), self.use_gpu) for x in count]
                     targets = torch.stack(targets)
-                    save_plots(file_path, output, targets, ids, save_label=True)
+                    save_plots(file_path, outputs, targets, ids, save_label=True)
                     # save_plots(file_path, output, [], ids, pred=True)
+
+            epoch_minus = np.array(epoch_minus)
+            print(epoch_minus)
+            mse = np.sqrt(np.mean(np.square(epoch_minus)))
+            mae = np.mean(np.abs(epoch_minus))
+            log_str = 'mae {}, mse {}'.format(mae, mse)
+            print(log_str)
+
+            
+        else:
+            with torch.no_grad():
+                for i, (images, targets) in enumerate(tqdm(data_loader)):
+                    images = to_var(images, self.use_gpu)
+                    images = images.float()
+
+                    timer.tic()
+                    output = self.model(images)
+                    elapsed += timer.toc(average=False)
+
+                    ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
+
+                    if 'ConNet' in self.model_name:
+                        output = output[0] / 50
+
+                    model = self.pretrained_model.split('/')
+                    file_path = os.path.join(self.model_test_path, '{} {} epoch {}'.format(self.model_name, self.dataset_info, self.get_epoch_num()))
+                    file_path = "./" + file_path.replace('.pth', '')
+
+                    if self.save_output_plots and i % save_freq == 0:
+                        # prepare the groundtruth targets
+                        targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
+                        targets = torch.stack(targets)
+                        save_plots(file_path, output, targets, ids, save_label=True)
+                        # save_plots(file_path, output, [], ids, pred=True)
 
     def test(self):
         """

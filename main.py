@@ -96,6 +96,9 @@ def main(version, config, output_txt, compile_txt):
     #     return
 
     data_loader, dataset_ids = get_loader(config)
+
+    print(dataset_ids)
+
     solver = Solver(version, data_loader, dataset_ids, vars(config), output_txt, compile_txt)
 
     if config.mode == 'train':
@@ -136,7 +139,7 @@ if __name__ == '__main__':
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-13 15_42_24.499701_train/5.pth',
+                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-13 15_42_24.499701_train/best_model.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
@@ -148,7 +151,7 @@ if __name__ == '__main__':
     #                     help='Toggles identification of failure cases')
 
     # misc
-    parser.add_argument('--mode', type=str, default='val',
+    parser.add_argument('--mode', type=str, default='pred',
                         choices=['train', 'val', 'test', 'pred'],
                         help='Mode of execution')
     parser.add_argument('--use_gpu', type=string_to_boolean, default=True,

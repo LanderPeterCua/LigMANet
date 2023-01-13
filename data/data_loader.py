@@ -87,10 +87,16 @@ def get_loader(config):
             else:
                 raise Exception("gpu is not available")
 
-            config.datasets = Crowd(os.path.join('C:/Users/lande/Desktop/THS-ST2/Datasets/ShanghaiTechAPreprocessed', config.mode),
+            if config.mode == 'pred':
+                config.datasets = Crowd(os.path.join('C:/Users/lande/Desktop/THS-ST2/Datasets/ShanghaiTechAPreprocessed', 'test'),
                                 config.crop_size,
                                 config.downsample_ratio,
                                 config.is_gray, config.mode)
+            else:
+                config.datasets = Crowd(os.path.join('C:/Users/lande/Desktop/THS-ST2/Datasets/ShanghaiTechAPreprocessed', config.mode),
+                                    config.crop_size,
+                                    config.downsample_ratio,
+                                    config.is_gray, config.mode)
 
             loader = DataLoader(dataset = config.datasets,
                                     collate_fn=(man_collate if config.mode == 'train' else default_collate),
@@ -98,6 +104,8 @@ def get_loader(config):
                                     shuffle=(True if config.mode == 'train' else False),
                                     num_workers=config.num_workers*config.device_count,
                                     pin_memory=(True if config.mode == 'train' else False))
+
+            return config.datasets.image_ids
                     
         else:
             if config.mode == 'train':
