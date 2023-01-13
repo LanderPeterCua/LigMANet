@@ -2,6 +2,7 @@ import os
 import torch
 import time
 import copy
+import logging
 import datetime
 import torch.nn as nn
 import torch.optim as optim
@@ -17,6 +18,10 @@ from utilities.marunet_losses import cal_avg_ms_ssim
 from losses.post_prob import Post_Prob
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
+from models.MAN import vgg_c
+from losses.bay_loss import Bay_Loss
+from utilities.helper import Save_Handle
+from utilities.helper import AverageMeter
 
 class Solver(object):
 
@@ -208,7 +213,7 @@ class Solver(object):
         st_sizes = torch.FloatTensor(transposed_batch[3])
         return images, points, targets, st_sizes
 
-    def model_step(self, images, targets, epoch, points, st_sizes):
+    def model_step(self, images, targets, epoch):
         """
         A step for each iteration
         
@@ -260,28 +265,6 @@ class Solver(object):
 
             # compute gradients using back propagation
             loss.backward()
-        elif 'MAN' in self.model_name:
-            with torch.set_grad_enabled(True):
-                output, features = self.model(images)
-                # compute loss using MSE loss function\
-                self.post_prob = Post_Prob(self.sigma,
-                                    self.crop_size,
-                                    self.downsample_ratio,
-                                    self.background_ratio,
-                                    self.use_background,
-                                    self.device)
-                # outputs, features = self.model(images)
-                prob_list = self.post_prob(points, st_sizes)
-                loss = self.criterion(prob_list, targets, output)
-                loss_c = 0
-                for feature in features:
-                    mean_feature = torch.mean(feature, dim=0)
-                    mean_sum = torch.sum(mean_feature**2)**0.5
-                    cosine = 1 - torch.sum(feature*mean_feature, dim=1) / (mean_sum * torch.sum(feature**2, dim=1)**0.5 + 1e-5)
-                    loss_c += torch.sum(cosine)
-                loss += loss_c
-
-            loss.backward()
         else:
             loss = self.criterion(output.squeeze(), targets.squeeze())
         
@@ -290,6 +273,59 @@ class Solver(object):
 
         # update parameters
         self.optimizer.step()
+
+        # return loss
+        return loss
+
+    def man_model_step(self, images, targets, epoch, points, st_sizes):
+        """
+        A step for each iteration
+        
+        Arguments:
+            images {torch.Tensor} -- input images
+            targets {torch.Tensor} -- groundtruth density maps
+            epoch {int} -- current epoch
+        """
+
+        # set model in training mode
+        self.model.train()
+
+        # empty the gradients of the model through the optimizer
+        self.optimizer.zero_grad()
+
+        # forward pass
+        images = images.float()
+        output = self.model(images)
+
+        gd_count = np.array([len(p) for p in points], dtype=np.float32)
+
+        with torch.set_grad_enabled(True):
+            output, features = self.model(images)
+            # compute loss using MSE loss function\
+            
+            # outputs, features = self.model(images)
+            prob_list = self.post_prob(points, st_sizes)
+            loss = self.criterion(prob_list, targets, output)
+            loss_c = 0
+            for feature in features:
+                mean_feature = torch.mean(feature, dim=0)
+                mean_sum = torch.sum(mean_feature**2)**0.5
+                cosine = 1 - torch.sum(feature*mean_feature, dim=1) / (mean_sum * torch.sum(feature**2, dim=1)**0.5 + 1e-5)
+                loss_c += torch.sum(cosine)
+            loss += loss_c
+
+            self.optimizer.zero_grad()
+            loss.backward()
+        
+            # update parameters
+            self.optimizer.step()
+
+            N = images.size(0)
+            pre_count = torch.sum(output.view(N, -1), dim=1).detach().cpu().numpy()
+            res = pre_count - gd_count
+            self.epoch_loss.update(loss.item(), N)
+            self.epoch_mse.update(np.mean(res * res), N)
+            self.epoch_mae.update(np.mean(abs(res)), N)
 
         # return loss
         return loss
@@ -325,40 +361,81 @@ class Solver(object):
         # start training
         start_time = time.time()
         if 'MAN' in self.model_name:
-            for e in range(start, self.num_epochs):
-                for i, (images, targets, points, st_sizes) in enumerate(tqdm(self.data_loader['train'])):
-                    # prepare input images
-                    images = to_var(images, self.use_gpu)
+            self.model = vgg_c.vgg19_trans()
+            self.model.to(self.device)
 
-                    # prepare groundtruth targets
-                    targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
-                    targets = torch.stack(targets)
+            self.post_prob = Post_Prob(self.sigma,
+                                self.crop_size,
+                                self.downsample_ratio,
+                                self.background_ratio,
+                                self.use_background,
+                                self.device)
+
+            self.criterion = Bay_Loss(self.use_background, self.device)
+            # self.save_list = Save_Handle(max_num=args.max_model_num)
+            self.best_mae = np.inf
+            self.best_mse = np.inf
+            # self.save_all = args.save_all
+            self.best_count = 0
+            
+            for e in range(start, self.num_epochs):
+                logging.info('-'*5 + 'Epoch {}/{}'.format(e, self.num_epochs - 1) + '-'*5)
+                self.epoch = e
+        
+                self.epoch_loss = AverageMeter()
+                self.epoch_mae = AverageMeter()
+                self.epoch_mse = AverageMeter()
+                self.epoch_start = time.time()
+                self.model.train()  # Set model to training mode
+                    
+                for i, (images, points, targets, st_sizes) in enumerate(tqdm(self.data_loader)):
+                    # # prepare input images
+                    # images = to_var(images, self.use_gpu)
+
+                    # # prepare groundtruth targets
+                    # targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
+                    # targets = torch.stack(targets)
 
                     # train model and get loss
-                    print("HERE" + str(type(images)))
                     images = images.to(self.device)
                     st_sizes = st_sizes.to(self.device)
                     points = [p.to(self.device) for p in points]
                     targets = [t.to(self.device) for t in targets]
 
-                    loss = self.model_step(images, targets, e, points, st_sizes)
+                    loss = self.man_model_step(images, targets, e, points, st_sizes)
 
-                # print out loss log
-                if (e + 1) % self.loss_log_step == 0:
-                    self.print_loss_log(start_time, iters_per_epoch, e, i, loss)
-                    self.losses.append((e, loss))
+                # # print out loss log
+                # if (e + 1) % self.loss_log_step == 0:
+                #     self.print_loss_log(start_time, iters_per_epoch, e, i, loss)
+                #     self.losses.append((e, loss))
+
+                
+
+                # # update learning rate based on learning schedule
+                # num_sched = len(self.learning_sched)
+                # if num_sched != 0 and sched < num_sched:
+                #     if (e + 1) in self.learning_sched:
+                #         self.lr /= 10
+                #         print('Learning rate reduced to', self.lr)
+                #         sched += 1
+
+                logging.getLogger().setLevel(logging.INFO)
+                logging.info('Epoch {} Train, Loss: {:.2f}, MSE: {:.2f} MAE: {:.2f}, Cost {:.1f} sec'
+                     .format(self.epoch, self.epoch_loss.get_avg(), np.sqrt(self.epoch_mse.get_avg()), self.epoch_mae.get_avg(),
+                             time.time()-self.epoch_start))
+                model_state_dic = self.model.state_dict()
+                save_path = os.path.join(self.model_save_path, '{}_ckpt.tar'.format(self.epoch))
 
                 # save model
                 if (e + 1) % self.model_save_step == 0:
                     self.save_model(e)
-
-                # update learning rate based on learning schedule
-                num_sched = len(self.learning_sched)
-                if num_sched != 0 and sched < num_sched:
-                    if (e + 1) in self.learning_sched:
-                        self.lr /= 10
-                        print('Learning rate reduced to', self.lr)
-                        sched += 1
+                    # torch.save({
+                    #     'epoch': self.epoch,
+                    #     'optimizer_state_dict': self.optimizer.state_dict(),
+                    #     'model_state_dict': model_state_dic
+                    # }, save_path)
+                    # self.save_list.append(save_path)  # control the number of saved models
+               
         else:
             for e in range(start, self.num_epochs):
                 for i, (images, targets) in enumerate(tqdm(self.data_loader)):
@@ -388,14 +465,91 @@ class Solver(object):
                         print('Learning rate reduced to', self.lr)
                         sched += 1
 
-        # print losses
-        write_print(self.output_txt, '\n--Losses--')
-        for e, loss in self.losses:
-            write_print(self.output_txt, str(e) + ' {:.10f}'.format(loss))
+            # print losses
+            write_print(self.output_txt, '\n--Losses--')
+            for e, loss in self.losses:
+                write_print(self.output_txt, str(e) + ' {:.10f}'.format(loss))
 
     def eval(self, data_loader):
         """
         Performs evaluation of a given model to get the MAE, MSE, FPS performance
+
+        Arguments:
+            data_loader {DataLoader} -- DataLoader of the dataset to be used
+        """
+
+        # set the model to eval mode
+        self.model.eval()
+
+        timer = Timer()
+        elapsed = 0
+        mae = 0
+        mse = 0
+
+        # predetermined save frequency of density maps
+        save_freq = 100
+
+        # begin evaluating on the dataset
+        with torch.no_grad():
+            for i, (images, targets) in enumerate(tqdm(data_loader)):
+                # prepare the input images
+                images = to_var(images, self.use_gpu)
+                images = images.float()
+
+                # prepare the groundtruth targets
+                targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
+                targets = torch.stack(targets)
+                
+                # generate output of model
+                timer.tic()
+                output = self.model(images)
+                elapsed += timer.toc(average=False)
+
+                # if model is ConNet, divide output by 50 as designed by original proponents
+                if 'ConNet' in self.model_name:
+                    output = output[0] / 50
+
+                ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
+                model = self.pretrained_model.split('/')
+                file_path = os.path.join(self.model_test_path, self.dataset_info + ' epoch ' + self.get_epoch_num())
+                
+                # generate copies of density maps as images 
+                # if difference between predicted and actual counts are bigger than 1
+                # if self.fail_cases:
+                #     t = targets[0].cpu().detach().numpy()
+                #     o = output[0].cpu().detach().numpy()
+
+                #     gt_count = round(np.sum(t))
+                #     et_count = round(np.sum(o))
+
+                #     diff = abs(gt_count - et_count)
+
+                #     if (diff > 0):
+                #         save_plots(os.path.join(file_path, 'failure cases', str(diff)), output, targets, ids)
+                
+                # generate copies of density maps as images
+                # if self.save_output_plots and i % save_freq == 0:
+                #     save_plots(file_path, output, targets, ids)
+
+                
+                # update MAE and MSE (summation part of the formula)
+                # mae += abs(output.sum() - targets.sum()).item()
+                # mse += ((targets.sum() - output.sum())*(targets.sum() - output.sum())).item()
+                
+                # output = torch.stack(output, dim=0).sum(dim=0)
+                mae += abs(output.sum() - targets.sum()).item()
+                mse += ((targets.sum() - output.sum())*(targets.sum() - output.sum())).item()
+
+        # compute for MAE, MSE and FPS
+        mae = mae / len(data_loader)
+        mse = np.sqrt(mse / len(data_loader))
+        fps = len(data_loader) / elapsed
+
+        return mae, mse, fps
+
+    def man_eval(self, data_loader):
+        """
+        Performs evaluation of a given MAN model to get the MAE, MSE, FPS performance
 
         Arguments:
             data_loader {DataLoader} -- DataLoader of the dataset to be used
@@ -515,7 +669,10 @@ class Solver(object):
         """
 
         # evaluate the model
-        out = self.eval(self.data_loader)
+        if 'MAN' in self.model_name:
+            out = self.man_eval(self.data_loader)
+        else:
+            out = self.eval(self.data_loader)
 
         # log the performance
         log = ('mae: {:.6f}, mse: {:.6f}, '

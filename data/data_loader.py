@@ -5,6 +5,7 @@ from data.shanghaitech_a import ShanghaiTechA
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
 from data.crowd import Crowd
+from models.MAN import vgg_c
 # from data.augmentations import Augmentations, BaseTransform
 import numpy as np
 import logging
@@ -73,21 +74,6 @@ def get_loader(config):
                             # image_transform=image_transform,
                             targets_resize=targets_resize)
 
-    # if config.dataset == 'mall':        
-    #     dataset = MallDataset(data_path=config.mall_data_path,
-    #                     mode=config.mode,                            
-    #                     density_sigma=config.density_sigma,
-    #                     image_transform=image_transform,
-    #                     targets_resize=targets_resize)
-
-    # if config.dataset == 'fdst':
-    #     dataset = FDST(data_path=config.fdst_data_path,
-    #                     mode=config.mode,                        
-    #                     density_sigma=config.density_sigma,
-    #                     image_transform=image_transform,
-    #                     targets_resize=targets_resize,
-    #                     outdoor=config.outdoor)
-
     
     # get the data loader
     if dataset is not None:
@@ -101,44 +87,18 @@ def get_loader(config):
             else:
                 raise Exception("gpu is not available")
 
-            # ['shanghaitech-a', 'shanghaitech-b', 'ucf-cc-50', 'ucf-qnrf']
-            # # ShanghaiTechA dataset
-            # parser.add_argument('--shanghaitech_a_path', type=str,
-            #                     default='../Datasets/ShanghaiTechA/',
-            #                     help='ShanghaiTech A dataset path')
-            # # ShanghaiTechB dataset
-            # parser.add_argument('--shanghaitech_b_path', type=str,
-            #                     default='../Datasets/ShanghaiTechB/',
-            #                     help='ShanghaiTech B dataset path')
-            # # UCF_CC_50 dataset
-            # parser.add_argument('--ucf_cc_50_path', type=str,
-            #                     default='../Datasets/UCF-CC-50/',
-            #                     help='UCF-CC-50 dataset path')
-            # # UCF_QNRF dataset
-            # parser.add_argument('--ucf_qnrf_path', type=str,
-            #                     default='../Datasets/UCF-QNRF/',
-            #                     help='UCF-QNRF dataset path')
-            if 'shanghaitech-a' in config.dataset:
-                data_dir = config.shanghaitech_a_path.replace('ShanghaiTechA', 'ShanghaiTechAPreprocessed')
-            elif 'shanghaitech-b' in config.dataset:
-                data_dir = config.shanghaitech_b_path
-            elif 'ucf-cc-50' in config.dataset:
-                data_dir = config.ucf_cc_50_path
-            elif 'ucf-qnrf' in config.dataset:
-                data_dir = config.ucf_qnrf_path
+            config.datasets = Crowd(os.path.join('C:/Users/lande/Desktop/THS-ST2/Datasets/ShanghaiTechAPreprocessed', config.mode),
+                                config.crop_size,
+                                config.downsample_ratio,
+                                config.is_gray, config.mode)
 
-            config.downsample_ratio = config.downsample_ratio
-            config.datasets = {x: Crowd(os.path.join(data_dir, x),
-                                    config.crop_size,
-                                    config.downsample_ratio,
-                                    config.is_gray, x) for x in ['train', 'val']}
-            loader = {x: DataLoader(dataset = config.datasets[x],
-                                    collate_fn=(man_collate if x == 'train' else default_collate),
-                                    batch_size=(config.batch_size if x == 'train' else 1),
-                                    shuffle=(True if x == 'train' else False),
+            loader = DataLoader(dataset = config.datasets,
+                                    collate_fn=(man_collate if config.mode == 'train' else default_collate),
+                                    batch_size=(config.batch_size if config.mode == 'train' else 1),
+                                    shuffle=(True if config.mode == 'train' else False),
                                     num_workers=config.num_workers*config.device_count,
-                                    pin_memory=(True if x == 'train' else False))
-                            for x in ['train', 'val']}
+                                    pin_memory=(True if config.mode == 'train' else False))
+                    
         else:
             if config.mode == 'train':
                 loader = DataLoader(dataset=dataset,

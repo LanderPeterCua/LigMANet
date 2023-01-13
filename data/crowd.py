@@ -92,7 +92,6 @@ class Crowd(data.Dataset):
         i, j, h, w = random_crop(ht, wd, self.c_size, self.c_size)
         img = F.crop(img, i, j, h, w)
         if len(keypoints) > 0:
-            print(keypoints[0])
             nearest_dis = np.clip(keypoints[:, 2], 4.0, 128.0)
 
             points_left_up = keypoints[:, :2] - nearest_dis[:, None] / 2.0
@@ -115,4 +114,4 @@ class Crowd(data.Dataset):
             if random.random() > 0.5:
                 img = F.hflip(img)
         return self.trans(img), torch.from_numpy(keypoints.copy()).float(), \
-               torch.from_numpy(target.copy()).float(), st_size
+            torch.from_numpy(target.copy()).float(), st_size
