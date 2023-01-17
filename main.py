@@ -129,7 +129,7 @@ if __name__ == '__main__':
                         help='Momentum')
     parser.add_argument('--weight_decay', type=float, default= 0.0001,
                         help='Weight decay')
-    parser.add_argument('--num_epochs', type=int, default=5,
+    parser.add_argument('--num_epochs', type=int, default=10,
                         help='Number of epochs')
     parser.add_argument('--learning_sched', type=list, default=[],
                         help='List of epochs to reduce the learning rate')
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-13 15_42_24.499701_train/best_model.pth',
+                        default='E:/School Files/Yr4Term2/Thesis/Pipeline/weights/MAN shanghaitech-a 2023-01-17 18_10_10.630025_train/10.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
@@ -193,9 +193,10 @@ if __name__ == '__main__':
                         help='background ratio')
 
     # for experiments
-    # parser.add_argument('--augment_exp', type=string_to_boolean, default=False)
-    # parser.add_argument('--brightness_change', type=float, default=0)
-    # parser.add_argument('--resolution_scale', type=float, default=1)
+    parser.add_argument('--augment_exp', type=string_to_boolean, default=True)
+    parser.add_argument('--crop_ratio', type=float, default=0.5)
+    parser.add_argument('--brightness_change', type=float, default=0)
+    parser.add_argument('--resolution_scale', type=float, default=1)
     # parser.add_argument('--outdoor', type=string_to_boolean, default=False)
     
     # ############# COMPRESSION #############

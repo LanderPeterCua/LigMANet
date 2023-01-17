@@ -17,7 +17,7 @@ class ShanghaiTechA(Dataset):
                  data_path,
                  mode,
                 #  density_sigma,
-                #  image_transform=None,
+                 image_transform=None,
                  targets_resize=1):
         """Initializes the dataset
 
@@ -32,7 +32,7 @@ class ShanghaiTechA(Dataset):
 
         self.data_path = data_path
         self.mode = mode
-        # self.image_transform = image_transform
+        self.image_transform = image_transform
         self.targets_resize = targets_resize
         
 
@@ -110,8 +110,8 @@ class ShanghaiTechA(Dataset):
         height, width, _ = image.shape
 
         # apply augmentation
-        # if self.image_transform != None:
-        #     image, target = self.image_transform(image, target)
+        if self.image_transform != None:
+            image, target = self.image_transform(image, target)
         
         # get original height and width of image
         ht = image.shape[0]

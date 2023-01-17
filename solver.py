@@ -53,8 +53,8 @@ class Solver(object):
         self.build_model()
 
         # # start with a pre-trained model
-        # if self.pretrained_model:
-        #     self.load_pretrained_model()
+        if self.pretrained_model:
+            self.load_pretrained_model()
 
         rand_seed = 64678  
         if rand_seed is not None:
@@ -645,7 +645,7 @@ class Solver(object):
             model.to(device)
             model.eval()
 
-            model.load_state_dict(torch.load(self.pretrained_model, device))
+            # model.load_state_dict(torch.load(self.pretrained_model, device))
             epoch_minus = []
             for i, (inputs, count, name) in enumerate(tqdm(data_loader)):
                 ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
@@ -691,7 +691,7 @@ class Solver(object):
 
                 if self.save_output_plots and i % save_freq == 0:
                     # prepare the groundtruth targets
-                    targets = [to_var(torch.Tensor(x), self.use_gpu) for x in count]
+                    targets = [to_var(torch.Tensor(x), self.use_gpu) for x in count.float()]
                     targets = torch.stack(targets)
                     save_plots(file_path, outputs, targets, ids, save_label=True)
                     # save_plots(file_path, output, [], ids, pred=True)
