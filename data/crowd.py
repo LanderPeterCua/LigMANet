@@ -6,7 +6,9 @@ import torch
 import torchvision.transforms.functional as F
 from torchvision import transforms
 import random
+import h5py
 import numpy as np
+import os.path as osp
 
 
 def random_crop(im_h, im_w, crop_h, crop_w):
@@ -35,6 +37,7 @@ class Crowd(data.Dataset):
         self.root_path = root_path
         self.im_list = sorted(glob(os.path.join(self.root_path, '*.jpg')))
         self.image_ids = [img[img.rfind('\\') + 1:] for img in self.im_list]
+        self.targets = [i.replace('jpg', 'h5') for i in self.image_ids]
         if method not in ['train', 'val', 'test', 'pred']:
             raise Exception("not implement")
         self.method = method
@@ -61,18 +64,19 @@ class Crowd(data.Dataset):
     def __getitem__(self, item):
         img_path = self.im_list[item]
         gd_path = img_path.replace('jpg', 'npy')
+        target = self.pull_target(item)
         try:
             img = Image.open(img_path).convert('RGB')
         except:
             print(os.path.basename(img_path).split('.')[0])
         if self.method == 'train':
             keypoints = np.load(gd_path)
-            return self.train_transform(img, keypoints)
+            return self.train_transform(img, keypoints), target
         else:
             keypoints = np.load(gd_path)
             img = self.trans(img)
             name = os.path.basename(img_path).split('.')[0]
-            return img, len(keypoints), name
+            return img, len(keypoints), name, target
 
     def train_transform(self, img, keypoints):
         """random crop image patch and find people in it"""
@@ -116,3 +120,25 @@ class Crowd(data.Dataset):
                 img = F.hflip(img)
         return self.trans(img), torch.from_numpy(keypoints.copy()).float(), \
             torch.from_numpy(target.copy()).float(), st_size
+
+    def pull_target(self, index):
+        """Returns a class corresponding to an image from the dataset
+
+        Arguments:
+            index {int} -- index of the item to be pulled from the list of ids
+
+        Returns:
+            np.array -- np.array representation of the groundtruth density map
+        """
+
+        target = self.targets[index]
+        self.root_path_s = osp.join(self.root_path, '%s')
+        target_path = self.root_path_s % target
+
+        target = h5py.File(target_path, 'r')
+        target = target['density']
+        target = np.array(target)
+
+        return target
+
+    

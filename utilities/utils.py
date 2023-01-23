@@ -83,6 +83,7 @@ def save_plots(file_path, output, labels, ids, save_label=False):
 
         # save density map outputted by the model
         file_name = dm_file_path % (ids[i])
+        # o = output[i].cpu().detach().numpy()
         o = output[i].cpu().detach().numpy()
         et_count = np.sum(o)
         o = o.squeeze()

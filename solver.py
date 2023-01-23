@@ -647,9 +647,8 @@ class Solver(object):
 
             # model.load_state_dict(torch.load(self.pretrained_model, device))
             epoch_minus = []
-            for i, (inputs, count, name) in enumerate(tqdm(data_loader)):
+            for i, (inputs, count, name, tar) in enumerate(tqdm(data_loader)):
                 ids = self.dataset_ids[i*self.batch_size: i*self.batch_size + self.batch_size]
-                print(ids)
                 inputs = inputs.to(device)
                 b, c, h, w = inputs.shape
                 h, w = int(h), int(w)
@@ -691,9 +690,9 @@ class Solver(object):
 
                 if self.save_output_plots and i % save_freq == 0:
                     # prepare the groundtruth targets
-                    targets = [to_var(torch.Tensor(x), self.use_gpu) for x in count.float()]
+                    targets = [to_var(torch.Tensor(x), self.use_gpu) for x in tar]
                     targets = torch.stack(targets)
-                    save_plots(file_path, outputs, targets, ids, save_label=True)
+                    save_plots(file_path, outputs, targets, ids, save_label=False)
                     # save_plots(file_path, output, [], ids, pred=True)
 
             epoch_minus = np.array(epoch_minus)

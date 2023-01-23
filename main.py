@@ -139,7 +139,7 @@ if __name__ == '__main__':
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='E:/School Files/Yr4Term2/Thesis/Pipeline/weights/MAN shanghaitech-a 2023-01-17 18_10_10.630025_train/10.pth',
+                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-18 14_55_47.453457_train/10.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
@@ -227,12 +227,12 @@ if __name__ == '__main__':
     ############# FILE PATHS #############
     parser.add_argument('--model_save_path', type=str, default='./weights',
                         help='Path for saving weights')
-    parser.add_argument('--model_test_path', type=str, default='/tests',
+    parser.add_argument('--model_test_path', type=str, default='./tests',
                         help='Path for saving test results')
 
     # ShanghaiTechA dataset
     parser.add_argument('--shanghaitech_a_path', type=str,
-                        default='../Datasets/ShanghaiTechA/',
+                        default='../Datasets/ShanghaiTechAPreprocessed/',
                         help='ShanghaiTech A dataset path')
     # ShanghaiTechB dataset
     parser.add_argument('--shanghaitech_b_path', type=str,
