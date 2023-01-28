@@ -7,6 +7,7 @@ from .transformer_cosine import TransformerEncoder, TransformerEncoderLayer
 __all__ = ['vgg19_trans']
 model_urls = {'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'}
 
+# Used to be named VGG_Trans
 class MAN(nn.Module):
     def __init__(self, features):
         super(MAN, self).__init__()

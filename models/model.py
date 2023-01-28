@@ -81,9 +81,7 @@ def get_model(model_config,
         model = ConNet(transform=mode.lower() == "train")
     
     elif model_config == "MAN":
-        cfg = {
-    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M']
-              }
+        cfg = {'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M']}
 
         model = MAN(make_layers(cfg['E']))
 

@@ -18,7 +18,6 @@ from utilities.marunet_losses import cal_avg_ms_ssim
 from losses.post_prob import Post_Prob
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
-from models.MAN import vgg_c
 from losses.bay_loss import Bay_Loss
 from utilities.helper import Save_Handle
 from utilities.helper import AverageMeter
@@ -301,9 +300,8 @@ class Solver(object):
 
         with torch.set_grad_enabled(True):
             output, features = self.model(images)
-            # compute loss using MSE loss function\
             
-            # outputs, features = self.model(images)
+            # compute loss using MSE loss function\
             prob_list = self.post_prob(points, st_sizes)
             loss = self.criterion(prob_list, targets, output)
             loss_c = 0
@@ -314,7 +312,6 @@ class Solver(object):
                 loss_c += torch.sum(cosine)
             loss += loss_c
 
-            self.optimizer.zero_grad()
             loss.backward()
         
             # update parameters
@@ -361,9 +358,6 @@ class Solver(object):
         # start training
         start_time = time.time()
         if 'MAN' in self.model_name:
-            self.model = vgg_c.vgg19_trans()
-            self.model.to(self.device)
-
             self.post_prob = Post_Prob(self.sigma,
                                 self.crop_size,
                                 self.downsample_ratio,
@@ -372,6 +366,7 @@ class Solver(object):
                                 self.device)
 
             self.criterion = Bay_Loss(self.use_background, self.device)
+            
             # self.save_list = Save_Handle(max_num=args.max_model_num)
             self.best_mae = np.inf
             self.best_mse = np.inf
@@ -387,6 +382,8 @@ class Solver(object):
                 self.epoch_mse = AverageMeter()
                 self.epoch_start = time.time()
                 self.model.train()  # Set model to training mode
+                device = torch.device('cuda:0')
+                self.model.to(device)
                     
                 for i, (images, points, targets, st_sizes) in enumerate(tqdm(self.data_loader)):
                     # # prepare input images
@@ -396,28 +393,26 @@ class Solver(object):
                     # targets = [to_var(torch.Tensor(target), self.use_gpu) for target in targets]
                     # targets = torch.stack(targets)
 
-                    # train model and get loss
                     images = images.to(self.device)
                     st_sizes = st_sizes.to(self.device)
                     points = [p.to(self.device) for p in points]
                     targets = [t.to(self.device) for t in targets]
-
+                    
+                    # train model and get loss
                     loss = self.man_model_step(images, targets, e, points, st_sizes)
 
                 # # print out loss log
-                # if (e + 1) % self.loss_log_step == 0:
-                #     self.print_loss_log(start_time, iters_per_epoch, e, i, loss)
-                #     self.losses.append((e, loss))
-
-                
+                if (e + 1) % self.loss_log_step == 0:
+                    self.print_loss_log(start_time, iters_per_epoch, e, i, loss)
+                    self.losses.append((e, loss))
 
                 # # update learning rate based on learning schedule
-                # num_sched = len(self.learning_sched)
-                # if num_sched != 0 and sched < num_sched:
-                #     if (e + 1) in self.learning_sched:
-                #         self.lr /= 10
-                #         print('Learning rate reduced to', self.lr)
-                #         sched += 1
+                num_sched = len(self.learning_sched)
+                if num_sched != 0 and sched < num_sched:
+                    if (e + 1) in self.learning_sched:
+                        self.lr /= 10
+                        print('Learning rate reduced to', self.lr)
+                        sched += 1
 
                 logging.getLogger().setLevel(logging.INFO)
                 logging.info('Epoch {} Train, Loss: {:.2f}, MSE: {:.2f} MAE: {:.2f}, Cost {:.1f} sec'
@@ -562,7 +557,8 @@ class Solver(object):
         self.model.eval()  # Set model to evaluate mode
         epoch_res = []
         # Iterate over data.
-        for inputs, count, name in self.data_loader:
+        # (images, points, targets, st_sizes)
+        for i, (inputs, count, _, _) in enumerate(tqdm(data_loader)):
             inputs = inputs.to(self.device)
             # inputs are images with different sizes
             b, c, h, w = inputs.shape
@@ -589,16 +585,23 @@ class Solver(object):
                         input_list.append(inputs[:, :, h_start:h_end, w_start:w_end])
                 with torch.set_grad_enabled(False):
                     pre_count = 0.0
+                    # TODO THIS MIGHT MAKE OUR RESULTS BETTER?
+                    # for idx, input in enumerate(input_list):
+                    #     output = self.model(input)[idx]
+                    #     pre_count += torch.sum(output)
                     for idx, input in enumerate(input_list):
                         output = self.model(input)[0]
                         pre_count += torch.sum(output)
+                print("HERE!!!")
                 res = count[0].item() - pre_count.item()
                 epoch_res.append(res)
             else:
                 with torch.set_grad_enabled(False):
                     outputs = self.model(inputs)[0]
                     # save_results(inputs, outputs, self.vis_dir, '{}.jpg'.format(name[0]))
-                    res = count[0].item() - torch.sum(outputs).item()
+                    # print(count[0])
+                    # print(torch.sum(outputs))
+                    res = torch.sum(count[0]).item() - torch.sum(outputs).item()
                     epoch_res.append(res)
 
         epoch_res = np.array(epoch_res)

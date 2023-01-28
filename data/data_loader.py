@@ -6,7 +6,6 @@ from data.shanghaitech_a import ShanghaiTechA
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
 from data.crowd import Crowd
-from models.MAN import vgg_c
 # from data.augmentations import Augmentations, BaseTransform
 import numpy as np
 import logging

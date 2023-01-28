@@ -37,7 +37,9 @@ class Crowd(data.Dataset):
         self.root_path = root_path
         self.im_list = sorted(glob(os.path.join(self.root_path, '*.jpg')))
         self.image_ids = [img[img.rfind('\\') + 1:] for img in self.im_list]
+
         self.targets = [i.replace('jpg', 'h5') for i in self.image_ids]
+
         if method not in ['train', 'val', 'test', 'pred']:
             raise Exception("not implement")
         self.method = method
@@ -63,20 +65,27 @@ class Crowd(data.Dataset):
 
     def __getitem__(self, item):
         img_path = self.im_list[item]
-        gd_path = img_path.replace('jpg', 'npy')
-        target = self.pull_target(item)
+
+        if self.method == 'pred':
+            gd_path = img_path.replace('jpg', 'h5')
+            target = self.pull_target(item)
+        else:
+            gd_path = img_path.replace('jpg', 'npy')
+        
+        
         try:
             img = Image.open(img_path).convert('RGB')
         except:
             print(os.path.basename(img_path).split('.')[0])
-        if self.method == 'train':
-            keypoints = np.load(gd_path)
-            return self.train_transform(img, keypoints), target
-        else:
+
+        if self.method == 'pred':
             keypoints = np.load(gd_path)
             img = self.trans(img)
             name = os.path.basename(img_path).split('.')[0]
             return img, len(keypoints), name, target
+        else:
+            keypoints = np.load(gd_path)
+            return self.train_transform(img, keypoints)
 
     def train_transform(self, img, keypoints):
         """random crop image patch and find people in it"""
@@ -121,6 +130,7 @@ class Crowd(data.Dataset):
         return self.trans(img), torch.from_numpy(keypoints.copy()).float(), \
             torch.from_numpy(target.copy()).float(), st_size
 
+    # FROM CONNET, IN ORDER TO PRINT THE DENSITY MAPS IN PRED
     def pull_target(self, index):
         """Returns a class corresponding to an image from the dataset
 

@@ -123,11 +123,11 @@ if __name__ == '__main__':
                         help='Dataset to use')
     
     # training settings
-    parser.add_argument('--lr', type=float, default=1e-7,
+    parser.add_argument('--lr', type=float, default=5e-6,
                         help='Learning rate')
     parser.add_argument('--momentum', type=float, default=0.95,
                         help='Momentum')
-    parser.add_argument('--weight_decay', type=float, default= 0.0001,
+    parser.add_argument('--weight_decay', type=float, default= 1e-5,
                         help='Weight decay')
     parser.add_argument('--num_epochs', type=int, default=10,
                         help='Number of epochs')
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                         choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
                         help='CNN model to use')
     parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-18 14_55_47.453457_train/10.pth',
+                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-18 14_55_47.453457_train/30.pth',
                         help='Pre-trained model')
     parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
     parser.add_argument('--init_weights', type=string_to_boolean, default=True,
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     #                     help='Toggles identification of failure cases')
 
     # misc
-    parser.add_argument('--mode', type=str, default='pred',
+    parser.add_argument('--mode', type=str, default='val',
                         choices=['train', 'val', 'test', 'pred'],
                         help='Mode of execution')
     parser.add_argument('--use_gpu', type=string_to_boolean, default=True,
