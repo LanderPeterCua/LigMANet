@@ -1,10 +1,10 @@
 import torch.nn as nn
-import torch
+import torch.nn.utils.prune as prune
 from torchvision import models
 
-class CSRNet(nn.Module):
+class CSRNetPruned(nn.Module):
     def __init__(self, load_weights=False):
-        super(CSRNet, self).__init__()
+        super(CSRNetPruned, self).__init__()
         self.seen = 0
         self.frontend_feat = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512]
         self.backend_feat  = [512, 512, 512,256,128,64]
@@ -33,20 +33,7 @@ class CSRNet(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
             
-    def regist_hook(self):
-        self.features = []
-
-        def get(model, input, output):
-            # function will be automatically called each time, since the hook is injected
-            self.features.append(output.detach())
-
-        for name, module in self._modules['frontend']._modules.items():
-            if name in ['1', '4', '9', '16']:
-                self._modules['frontend']._modules[name].register_forward_hook(get)
-        for name, module in self._modules['backend']._modules.items():
-            if name in ['1', '7']:
-                self._modules['backend']._modules[name].register_forward_hook(get)
-
+                
 def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
     if dilation:
         d_rate = 2
@@ -58,6 +45,7 @@ def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
         else:
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=d_rate,dilation = d_rate)
+            # prune.ln_structured(conv2d, name="weight", amount=1, n=1, dim=1)
             if batch_norm:
                 layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
             else:

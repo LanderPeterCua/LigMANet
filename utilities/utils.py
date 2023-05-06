@@ -1,3 +1,5 @@
+# Taken from ConNet Repository
+
 import os
 import torch
 import time
@@ -76,10 +78,15 @@ def save_plots(file_path, output, labels, ids, save_label=False):
     mkdir(dm_file_path)
 
     # file paths
+    img_file_path = os.path.join("C:/Users/lande/Desktop/THS-ST2/Datasets/ShanghaiTechAPreprocessed/test", '%s')
     file_path = os.path.join(file_path , '%s')
     dm_file_path = os.path.join(dm_file_path, '%s')
+    img_dest_path = dm_file_path.replace("density maps", "images")
 
     for i in range(0, len(ids)):
+        # # save image
+        # img_file_name = img_file_path % (ids[i])
+        # plt.imsave(img_file_name)
 
         # save density map outputted by the model
         file_name = dm_file_path % (ids[i])
@@ -101,12 +108,16 @@ def save_plots(file_path, output, labels, ids, save_label=False):
         if save_label:
             plt.imsave(file_name3, l)
 
+        img = plt.imread(img_file_path % ids[i])
+        plt.subplot(1, 3, 1)
+        plt.imshow(img)
+
         # plot the two density maps in the same image
-        plt.subplot(1, 2, 1)
+        plt.subplot(1, 3, 2)
         plt.imshow(l)
         text = plt.text(0, 0, 'actual: {} ({})\npredicted: {} ({})\n\n'.format(round(gt_count), str(gt_count), round(et_count), str(et_count)))
         
-        plt.subplot(1, 2, 2)
+        plt.subplot(1, 3, 3)
         plt.imshow(o)
         plt.savefig(file_name2)
 

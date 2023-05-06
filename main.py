@@ -1,312 +1,230 @@
 import os
-from utilities.utils import write_print, mkdir
-import argparse
-from solver import Solver
-from data.data_loader import get_loader
-from torch.backends import cudnn
-from datetime import datetime
-import zipfile
-import torch
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0" # make into list if more than one GPU
+
 import numpy as np
+from torch.backends import cudnn
+import torch
+
+from models.CSRNet.CSRNetSolver import CSRNetSolver
+from models.CSRNet.CSRNetDataset import CSRNetDataset
+
+from models.CAN.CANSolver import CANSolver
+from models.CAN.CANSolverSKT import CANSolverSKT
+from models.CAN.CANSolverPruned import CANSolverPruned
+
+from models.MAN.MANSolver import MANSolver
+from models.MAN.MANSolverSKT import MANSolverSKT
+from models.MAN.MANSolverPruned import MANSolverPruned
+import argparse
 
 
-def zip_directory(path, zip_file):
-    """Stores all py and cfg project files inside a zip file
+# TODO Add parameters to the constructor during THS-ST3 so that users can utilize the pipeline without changing the code
+class Paths(object):
+    """ A class that contains all the paths to be used in the pipeline
 
-    Arguments:
-        path {string} -- current path
-        zip_file {zipfile.ZipFile} -- zip file to contain the project files
+    Attributes:
+        pretrained_model (string): path to the pretrained model for validation, test, or prediction;
+                                   set to None during training
+        weights (string): path to the folder containing saved models
+        test_results (string): path to the folder containing the results of testing
+        shanghaitech_a (string): path to the folder containing the shanghaitech_a dataset
+        shanghaitech_b (string): path to the folder containing the shanghaitech_b dataset
+        ucf_cc_50 (string): path to the folder containing the ucf_cc_50 dataset
+        ucf_qnrf (string): path to the folder containing the ucf_qnrf dataset
     """
-    files = os.listdir(path)
-    for file in files:
-        if file.endswith('.py') or file.endswith('cfg'):
-            zip_file.write(os.path.join(path, file))
-            if file.endswith('cfg'):
-                os.remove(file)
+    def __init__(self):
+        self.pretrained_model = None 
+        self.weights = './weights'
+        self.test_results = './tests'
+        self.shanghaitech_a = '../Datasets/ShanghaiTechA/'
+        self.shanghaitech_b = '../Datasets/ShanghaiTechB/'
+        self.ucf_cc_50 = '../Datasets/UCF-CC-50/folds/'
+        self.ucf_qnrf = '../Datasets/UCF-QNRF/'
+        self.man_shanghaitech_a = '../Datasets/ShanghaiTechAPreprocessed/'
+        self.man_shanghaitech_b = '../Datasets/ShanghaiTechBPreprocessed/'
+        self.man_ucf_cc_50 = '../Datasets/UCF-CC-50Preprocessed/folds/'
+        self.man_ucf_qnrf = '../Datasets/UCF-QNRFPreprocessed/'
 
+# TODO Add parameters to the constructor during THS-ST3 so that users can utilize the pipeline without changing the code
+class Config(object):
+    """ A class that contains all the needed configurations regarding the training/validation/prediction session.
 
-def save_config(path, version, config):
-    """saves the configuration of the experiment
-
-    Arguments:
-        path {str} -- save path
-        version {str} -- version of the model based on the time
-        config {dict} -- contains argument and its value
-
+    Attributes:
+        mode (string) [Train, Val, Test, Pred]: determines how the model will be used within the pipeline
+        model (string) [CSRNet, CAN, MAN, ConNet]: determines what crowd counting model to be used for the session
+        dataset (string) [ShanghaiTech-A, ShanghaiTech-B, UCF-CC-50, UCF-QNRF]: determines what dataset the crowd counting model will be used on
+        learning_rate (double): learning rate of the model
+        momentum (double): momentum of the model
+        weight_decay (double): weight decay of the model
+        num_epochs (int): number of epochs for training
+        batch_size (int): batch size of the model
+        use_gpu (bool): True if the session will use the GPU, False if the session will use the CPU
     """
-    cfg_name = '{}.{}'.format(version, 'cfg')
+    def __init__(self):
+        self.mode = "Train"                 
+        self.model = "MAN"              
+        self.dataset = "UCFCC50" # [Shanghaitech-A, Shanghaitech-B, UCFCC50, UCFQNRF] 
+        self.cc50_val = 3 # [1, 2, 3, 4, 5]
+        self.cc50_test = 5 # [1, 2, 3, 4, 5]
+        
+        #VGG
+        self.lr = 5e-6
+        self.learning_sched = []
+        
+        self.momentum = 0.95             
+        self.weight_decay = 1e-5  
+        self.num_epochs = 1200            
+        self.batch_size = 1    
+        self.use_gpu = True
+        self.weights = "weights/VGG19-ShanghaiTech-A/best_model_9.pth"
 
-    with open(cfg_name, 'w') as f:
-        for k, v in config.items():
-            f.write('{}: {}\n'.format(str(k), str(v)))
+        self.compression = True
+        self.compression_technique = "SKT" # [pruning, SKT]
+        self.lamb_fsp = None
+        self.lamb_cos = None
+        self.SKT_teacher_ckpt = "weights/0410-174037/916_teacher_ckpt.tar"
+        self.SKT_student_ckpt = "weights/0410-174037/916_student_ckpt.tar"
+        
+        print('GPU:', torch.cuda.current_device())
+        print('GPU Name:', torch.cuda.get_device_name(torch.cuda.current_device()))
+        
 
-    zip_name = '{}.{}'.format(version, 'zip')
-    zip_name = os.path.join(path, zip_name)
-    zip_file = zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED)
-    zip_directory('.', zip_file)
-    zip_file.close()
-
-
-def string_to_boolean(v):
-    """Converts string to boolean
-
-    Arguments:
-        v {string} -- string representation of a boolean values;
-        must be true or false
-
-    Returns:
-        boolean -- boolean true or false
-    """
-    return v.lower() in ('true')
-
-
-def main(version, config, output_txt, compile_txt):
-    """Runs either Solver or Compressor object
-
-    Arguments:
-        v {string} -- string representation of a boolean values;
-        must be true or false
-
-    Returns:
-        config {dict} -- contains argument and its value
-        output_txt {str} -- file name for the text file where details are logged
-        compile_txt {str} -- file name for the text file where performance is compiled (if val/test mode)
-    """
-
-    # for fast training
+def main():
+    # for faster training
     cudnn.benchmark = True
+    config = Config()
+    paths = Paths()
 
+    if (config.compression == False):
+        if config.model == "CSRNet":
+            solver = CSRNetSolver(config, paths)
+            solver.start(config)
 
-    # if config.use_compress:
-    #     config.mode = 'train'
-    #     train_loader, _ = get_loader(config)
+        elif config.model == "CAN":
+            solver = CANSolver(config, paths)
+            solver.start(config)
 
-    #     if config.dataset == 'micc':
-    #         config.mode = 'val'
-    #     else:
-    #         config.mode = 'test'
-    #     val_loader, dataset_ids = get_loader(config)
+        elif config.model == "MAN":
+            args = parse_args(config, paths)
+            solver = MANSolver(args)
+            
+            if config.mode == "Train":
+                solver.setup()
+                solver.train()
+            elif config.mode == "Test":
+                solver.test(args)
+    
+    else:
+        if config.compression_technique == "Pruning":
+            if config.model == "CAN":
+                solver = CANSolverPruned(config, paths)
+                solver.start(config)
+            
+            elif config.model == "MAN":
+                args = parse_args(config, paths)
+                solver = MANSolverPruned(args)
 
-    #     data_loaders = {
-    #         'train': train_loader,
-    #         'val': val_loader
-    #     }
-    #     compressor = Compressor(data_loaders, dataset_ids, vars(config), output_txt)
-    #     compressor.compress()
-    #     return
+                if config.mode == "Train":
+                    solver.setup()
+                    solver.train()
+                elif config.mode == "Test":
+                    solver.test(args)
+        
+        else:
+            if config.model == "CAN":
+                solver = CANSolverSKT(config, paths)
+                solver.start(config)
+            
+            elif config.model == "MAN":
+                args = parse_args(config, paths)
+                solver = MANSolverSKT(args)
 
-    data_loader, dataset_ids = get_loader(config)
+                if config.mode == "Train":
+                    solver.setup()
+                    solver.train()
+                elif config.mode == "Test":
+                    solver.test(args)
 
-    print(dataset_ids)
+def parse_args(config, paths):
+        config = config
+        paths = paths
+        
+        if (config.dataset == "Shanghaitech-A"):
+            dataset_path = paths.man_shanghaitech_a
+        elif (config.dataset == "Shanghaitech-B"):
+            dataset_path = paths.man_shanghaitech_b
+        elif (config.dataset == "UCFCC50"):
+              dataset_path = paths.man_ucf_cc_50
+        else:
+              dataset_path = paths.man_ucf_qnrf
+              
+        parser = argparse.ArgumentParser(description=config.mode)
+        parser.add_argument('--model-name', default=config.model, help='the name of the model')
+        parser.add_argument('--dataset-name', default=config.dataset, help='the name of the dataset')
+        parser.add_argument('--data-dir', default=dataset_path,
+                            help='training data directory')
+        parser.add_argument('--cc-50-val', default=config.cc50_val, help='fold number to use as validation set for cc50')
+        parser.add_argument('--cc-50-test', default=config.cc50_test, help='fold number to use as test set for cc50')
+        parser.add_argument('--save-dir', default=paths.weights,
+                            help='directory to save models.')
+        parser.add_argument('--save-all', type=bool, default=True,
+                            help='whether to save all best model')
+        parser.add_argument('--lr', type=float, default=config.lr,
+                            help='the initial learning rate')
+        parser.add_argument('--weight-decay', type=float, default=config.weight_decay,
+                            help='the weight decay')
+        parser.add_argument('--resume', default=None,
+                            help='the path of resume training model')
+        parser.add_argument('--max-model-num', type=int, default=2,
+                            help='max models num to save ')
+        parser.add_argument('--max-epoch', type=int, default=config.num_epochs,
+                            help='max training epoch')
+        parser.add_argument('--val-epoch', type=int, default=1,
+                            help='the num of steps to log training information')
+        parser.add_argument('--val-start', type=int, default=600,
+                            help='the epoch start to val')
+        parser.add_argument('--batch-size', type=int, default=config.batch_size,
+                            help='train batch size')
+        parser.add_argument('--device', default='1', help='assign device')
+        parser.add_argument('--num-workers', type=int, default=8,
+                            help='the num of training process')
 
-    solver = Solver(version, data_loader, dataset_ids, vars(config), output_txt, compile_txt)
+        parser.add_argument('--is-gray', type=bool, default=False,
+                            help='whether the input image is gray')
+        parser.add_argument('--crop-size', type=int, default=256,
+                            help='the crop size of the train image')
+        parser.add_argument('--downsample-ratio', type=int, default=16,
+                            help='downsample ratio')
 
-    if config.mode == 'train':
-        temp_save_path = os.path.join(config.model_save_path, version)
-        mkdir(temp_save_path)
-        solver.train()
-
-    elif config.mode == 'val' or config.mode == 'test':
-        solver.test()
-
-    elif config.mode == 'pred':
-        solver.pred()
-
+        parser.add_argument('--use-background', type=bool, default=True,
+                            help='whether to use background modelling')
+        parser.add_argument('--sigma', type=float, default=8.0,
+                            help='sigma for likelihood')
+        parser.add_argument('--background-ratio', type=float, default=0.15,
+                            help='background ratio')
+  
+        parser.add_argument('--best-model-path', default=config.weights,
+                            help='best model path')
+        parser.add_argument('--learning-sched', default = config.learning_sched,
+                            help='number of epochs for warmup learning')
+        
+        parser.add_argument('--compression', default = config.compression,
+                            help='whether compression is to be implemented')
+        parser.add_argument('--compression-technique', default = config.compression_technique,
+                            help='compression technique to be used')
+        parser.add_argument('--lamb-fsp', default = config.lamb_fsp,
+                            help='weight of dense fsp loss')
+        parser.add_argument('--lamb-cos', default = config.lamb_fsp,
+                            help='weight of cos loss')
+        parser.add_argument('--teacher_ckpt', default = config.SKT_teacher_ckpt,
+                            help='SKT teacher checkpoint')
+        parser.add_argument('--student_ckpt', default = config.SKT_student_ckpt,
+                            help='SKT student checkpoint')
+    
+        args = parser.parse_args()
+        return args
 
 if __name__ == '__main__':
-    torch.set_printoptions(threshold=np.nan)
-    parser = argparse.ArgumentParser()
-
-    # dataset info
-    parser.add_argument('--dataset', type=str, default='shanghaitech-a',
-                        choices=['shanghaitech-a', 'shanghaitech-b', 'ucf-cc-50', 'ucf-qnrf'],
-                        help='Dataset to use')
+    main()
     
-    # training settings
-    parser.add_argument('--lr', type=float, default=5e-6,
-                        help='Learning rate')
-    parser.add_argument('--momentum', type=float, default=0.95,
-                        help='Momentum')
-    parser.add_argument('--weight_decay', type=float, default= 1e-5,
-                        help='Weight decay')
-    parser.add_argument('--num_epochs', type=int, default=10,
-                        help='Number of epochs')
-    parser.add_argument('--learning_sched', type=list, default=[],
-                        help='List of epochs to reduce the learning rate')
-    parser.add_argument('--batch_size', type=int, default=1,
-                        help='Batch size')
-    parser.add_argument('--model', type=str, default='MAN',
-                        choices=['CSRNet', 'CAN', 'MAN', 'ConNet'],
-                        help='CNN model to use')
-    parser.add_argument('--pretrained_model', type=str,
-                        default='C:/Users/lande/Desktop/THS-ST2/Pipeline/weights/MAN shanghaitech-a 2023-01-18 14_55_47.453457_train/30.pth',
-                        help='Pre-trained model')
-    parser.add_argument('--save_output_plots', type=string_to_boolean, default=True)
-    parser.add_argument('--init_weights', type=string_to_boolean, default=True,
-                        help='Toggles weight initialization')
-    parser.add_argument('--imagenet_pretrain', type=string_to_boolean,
-                        default=False,
-                        help='Toggles pretrained weights for vision models')
-    # parser.add_argument('--fail_cases', type=string_to_boolean, default=False,
-    #                     help='Toggles identification of failure cases')
-
-    # misc
-    parser.add_argument('--mode', type=str, default='val',
-                        choices=['train', 'val', 'test', 'pred'],
-                        help='Mode of execution')
-    parser.add_argument('--use_gpu', type=string_to_boolean, default=True,
-                        help='Toggles the use of GPU')
-
-    # epoch step size
-    parser.add_argument('--loss_log_step', type=int, default=5)
-    parser.add_argument('--model_save_step', type=int, default=5)
-
-    # for MAN only
-    parser.add_argument('--save-all', type=bool, default=False,
-                        help='whether to save all best model')
-    parser.add_argument('--resume', default='',
-                        help='the path of resume training model')
-    parser.add_argument('--max-model-num', type=int, default=1,
-                        help='max models num to save ')
-    #parser.add_argument('--val-epoch', type=int, default=5,
-    #                    help='the num of steps to log training information')
-    parser.add_argument('--val-start', type=int, default=600,
-                        help='the epoch start to val')
-    parser.add_argument('--batch-size', type=int, default=1,
-                        help='train batch size')
-    parser.add_argument('--device', help='assign device')
-    parser.add_argument('--num-workers', type=int, default=8,
-                        help='the num of training process')
-
-    parser.add_argument('--is-gray', type=bool, default=False,
-                        help='whether the input image is gray')
-    parser.add_argument('--crop-size', type=int, default=256,
-                        help='the crop size of the train image')
-    parser.add_argument('--downsample-ratio', type=int, default=16,
-                        help='downsample ratio')
-
-    parser.add_argument('--use-background', type=bool, default=True,
-                        help='whether to use background modelling')
-    parser.add_argument('--sigma', type=float, default=8.0,
-                        help='sigma for likelihood')
-    parser.add_argument('--background-ratio', type=float, default=0.15,
-                        help='background ratio')
-
-    # for experiments
-    parser.add_argument('--augment_exp', type=string_to_boolean, default=True)
-    parser.add_argument('--crop_ratio', type=float, default=0.5)
-    parser.add_argument('--brightness_change', type=float, default=0)
-    parser.add_argument('--resolution_scale', type=float, default=1)
-    # parser.add_argument('--outdoor', type=string_to_boolean, default=False)
-    
-    # ############# COMPRESSION #############
-
-    # parser.add_argument('--use_compress', type=string_to_boolean, default='false',
-    #                     help='Toggles execution of compression technique')
-    # parser.add_argument('--compression', type=str, default='musco',
-    #                     choices=['skt', 'musco'],
-    #                     help='Compression technique to use if use_compress is true')
-    # parser.add_argument('--weights_json_path', type=str, default='best_models.json')
-
-    # # musco
-    # parser.add_argument('--musco_layers_to_compress', type=str, default='')
-    # parser.add_argument('--musco_ft_every', type=float, default=10)
-    # parser.add_argument('--musco_iters', type=int, default=5)
-    # parser.add_argument('--musco_ft_epochs', type=int, default=10)
-    # parser.add_argument('--musco_ft_checkpoint', type=int, default=1)
-    # parser.add_argument('--musco_ft_only', type=string_to_boolean, default="false")
-
-    # # skt
-    # parser.add_argument('--skt_student_ckpt', type=str, default=None)
-    # parser.add_argument('--skt_num_epochs', type=int, default=1000)
-    # parser.add_argument('--skt_lamb_fsp', type=float, default=0.5)
-    # parser.add_argument('--skt_lamb_cos', type=float, default=0.5)
-    # parser.add_argument('--skt_print_freq', type=int, default=200)
-    # parser.add_argument('--skt_save_freq', type=int, default=0)
-
-    ############# FILE PATHS #############
-    parser.add_argument('--model_save_path', type=str, default='./weights',
-                        help='Path for saving weights')
-    parser.add_argument('--model_test_path', type=str, default='./tests',
-                        help='Path for saving test results')
-
-    # ShanghaiTechA dataset
-    parser.add_argument('--shanghaitech_a_path', type=str,
-                        default='../Datasets/ShanghaiTechAPreprocessed/',
-                        help='ShanghaiTech A dataset path')
-    # ShanghaiTechB dataset
-    parser.add_argument('--shanghaitech_b_path', type=str,
-                        default='../Datasets/ShanghaiTechB/',
-                        help='ShanghaiTech B dataset path')
-    # UCF_CC_50 dataset
-    parser.add_argument('--ucf_cc_50_path', type=str,
-                        default='../Datasets/UCF-CC-50/',
-                        help='UCF-CC-50 dataset path')
-    # UCF_QNRF dataset
-    parser.add_argument('--ucf_qnrf_path', type=str,
-                        default='../Datasets/UCF-QNRF/',
-                        help='UCF-QNRF dataset path')
-
-
-    config = parser.parse_args()
-
-    args = vars(config)
-    output_txt = ''
-
-    # Preparation of details for Solver object (if use_compress == False)
-    if args['mode'] == 'train':
-        dataset = args['dataset']
-       
-
-        version = str(datetime.now()).replace(':', '_')
-        # version = '{} {} bright_{} res_{} {}_train'.format(args['model'], dataset, args['brightness_change'], args['resolution_scale'], version)
-
-        version = '{} {} {}_train'.format(args['model'], dataset, version)
-        path = args['model_save_path']
-        path = os.path.join(path, version)
-        output_txt = os.path.join(path, '{}.txt'.format(version))
-        compile_txt = os.path.join(path, 'COMPILED {} {}.txt'.format(args['model'], version))
-
-    elif args['mode'] == 'val':
-        # C:/Users/hylen/Desktop/THS-ST2/Pipeline/weights/CSRNet shanghaitech-a 2023-01-09 16_51_40.548283_train/10.pth
-        model = args['pretrained_model'].split('/')
-        version = '{}_test_{}'.format(model[-2], model[-1])
-        # pretrained/12-21-2022/2
-        # args['model_test_path'] += '/' + '/'.join(model[:-1])
-        path = '/'.join(model[:-3]) + args['model_test_path']
-        # path = os.path.join(path, model[0])
-        output_txt = os.path.join(path, '{}.txt'.format(version))
-        compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
-
-    elif args['mode'] == 'test':
-        model = args['pretrained_model'].split('/')
-        version = '{}_test_{}'.format(model[-2], model[-1])
-        
-        # args['model_test_path'] += '/' + '/'.join(model[:-1])
-        path = '/'.join(model[:-3]) + args['model_test_path']
-        # path = os.path.join(path, model[0])
-        output_txt = os.path.join(path, '{}.txt'.format(version))
-        compile_txt = os.path.join(path, 'COMPILED {} {} {}.txt'.format(args['model'], args['mode'], model[0]))
-
-    elif args['mode'] == 'pred':
-        model = args['pretrained_model'].split('/')
-        version = '{}_test_{}'.format(model[-2], model[-1])
-        
-        # args['model_test_path'] += '/' + '/'.join(model[:-1])
-        path = '/'.join(model[:-3]) + args['model_test_path']
-        # path = args['model_test_path']
-        path = os.path.join(path, model[0])
-        output_txt = os.path.join(path, '{}.txt'.format(version))
-        compile_txt = os.path.join(path, 'COMPILED {} {}.txt'.format(args['model'], model[0]))
-
-    # create folder and save copy of files
-    mkdir(path)
-    save_config(path, version, args)
-
-    # log the settings in output file
-    write_print(output_txt, '------------ Options -------------')
-    for k, v in args.items():
-        write_print(output_txt, '{}: {}'.format(str(k), str(v)))
-    write_print(output_txt, '-------------- End ----------------')
-
-    main(version, config, output_txt, compile_txt)

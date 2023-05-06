@@ -7,10 +7,12 @@ from typing import Optional, List
 from torch import Tensor
 from torch.nn import Parameter
 
+cfg = {
+    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M']
+}
+
 __all__ = ['vgg19_trans']
 model_urls = {'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'}
-
-BACKBONE_MODEL = "vgg"
 
 class LearnableGlobalLocalMultiheadAttention(nn.Module):
     NUM_WEIGHTS = 9
@@ -263,16 +265,11 @@ def _get_activation_fn(activation):
 class MAN(nn.Module):
     def __init__(self, features):
         super(MAN, self).__init__()
-        self.features = features
+        # self.features = features
+        self.features = []
+        self.frontend = features
 
-        if (BACKBONE_MODEL == "efficientnet-b0"):
-            d_model = 1280
-        elif (BACKBONE_MODEL == "efficientnet-b3"):
-            d_model = 1536
-        elif (BACKBONE_MODEL == "efficientnet-b5"):
-            d_model = 2048
-        else:
-            d_model = 512
+        d_model = 512
             
         nhead = 2
         num_layers = 4
@@ -292,16 +289,14 @@ class MAN(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(128, 1, 1)
         )
-
+    
     def forward(self, x):
+        self.features = []
         b, c, h, w = x.shape
         rh = int(h) // 16
         rw = int(w) // 16
-        
-        if ("efficientnet" in BACKBONE_MODEL):
-            x = self.features.forward_features(x)
-        else:
-            x = self.features(x)   # vgg network
+ 
+        x = self.frontend(x)   # vgg network
         
         bs, c, h, w = x.shape
         x = x.flatten(2).permute(2, 0, 1)
@@ -311,3 +306,39 @@ class MAN(nn.Module):
         x = F.upsample_bilinear(x, size=(rh, rw))
         x = self.reg_layer_0(x)   # regression head
         return torch.relu(x), features
+        # return x, features
+    
+    def regist_hook(self):
+        self.features = []
+
+        def get(model, input, output):
+            # function will be automatically called each time, since the hook is injected
+            self.features.append(output.detach())
+        for name in self.features:
+            if name in ['1', '4', '9', '18', '27', '36']:
+                self.features[name].register_forward_hook(get)
+
+    
+
+def init_MAN():
+    """VGG 19-layer model (configuration "E")
+        model pre-trained on ImageNet
+    """
+    model = MAN(make_layers(cfg['E']))
+    model.load_state_dict(model_zoo.load_url(model_urls['vgg19']), strict=False)
+    return model
+
+def make_layers(cfg, batch_norm=False):
+    layers = []
+    in_channels = 3
+    for v in cfg:
+        if v == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        else:
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+            if batch_norm:
+                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+            else:
+                layers += [conv2d, nn.ReLU(inplace=True)]
+            in_channels = v
+    return nn.Sequential(*layers)

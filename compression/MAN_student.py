@@ -7,10 +7,19 @@ from typing import Optional, List
 from torch import Tensor
 from torch.nn import Parameter
 
-__all__ = ['vgg19_trans']
-model_urls = {'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'}
-
-BACKBONE_MODEL = "vgg"
+# ORIGINAL: 64, 128, 256, 512
+channel_nums = [[57, 115, 230, 461],  # 9/10
+                [51, 102, 205, 410],  # 4/5
+                [45, 90, 179, 358],  # 7/10
+                [38, 77, 154, 307],  # 3/5
+                [32, 64, 128, 256],  # 1/2
+                [21, 43, 85, 171],  # 1/3
+                [16, 32, 64, 128],  # 1/4
+                [13, 26, 51, 102],  # 1/5
+                [11, 21, 43, 85],   # 1/6
+                [9, 18, 37, 73],     # 1/7
+                [4, 8, 16, 32]      # 1/8
+               ]
 
 class LearnableGlobalLocalMultiheadAttention(nn.Module):
     NUM_WEIGHTS = 9
@@ -159,6 +168,7 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
         consistent_mask = torch.sum(local_att_mask, dim=0)
 
         return attn, consistent_mask
+    
 
 class TransformerEncoder(nn.Module):
     def __init__(self, encoder_layer, num_layers, norm=None):
@@ -183,6 +193,7 @@ class TransformerEncoder(nn.Module):
             output = self.norm(output)
 
         return output, features
+        
 
 class TransformerEncoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
@@ -261,18 +272,58 @@ def _get_activation_fn(activation):
     raise RuntimeError(F"activation should be relu/gelu, not {activation}.")
 
 class MAN(nn.Module):
-    def __init__(self, features):
+    def __init__(self, features, ratio, transform=True):
         super(MAN, self).__init__()
-        self.features = features
+        self.seen = 0
+        self.transform = transform
+        channel = channel_nums[ratio]
+        self.conv0_0 = conv_layers(3, channel[0])
+        if self.transform:
+            self.transform0_0 = feature_transform(channel[0], 64)
+        self.conv0_1 = conv_layers(channel[0], channel[0])
 
-        if (BACKBONE_MODEL == "efficientnet-b0"):
-            d_model = 1280
-        elif (BACKBONE_MODEL == "efficientnet-b3"):
-            d_model = 1536
-        elif (BACKBONE_MODEL == "efficientnet-b5"):
-            d_model = 2048
-        else:
-            d_model = 512
+        self.pool0 = pool_layers()
+        if transform:
+            self.transform1_0 = feature_transform(channel[0], 64)
+
+        self.conv1_0 = conv_layers(channel[0], channel[1])
+        self.conv1_1 = conv_layers(channel[1], channel[1])
+
+        self.pool1 = pool_layers()
+        if transform:
+            self.transform2_0 = feature_transform(channel[1], 128)
+
+        self.conv2_0 = conv_layers(channel[1], channel[2])
+        self.conv2_1 = conv_layers(channel[2], channel[2])
+        self.conv2_2 = conv_layers(channel[2], channel[2])
+        self.conv2_3 = conv_layers(channel[2], channel[2])
+
+        self.pool2 = pool_layers()
+        if transform:
+            self.transform3_0 = feature_transform(channel[2], 256)
+
+        self.conv3_0 = conv_layers(channel[2], channel[3])
+        self.conv3_1 = conv_layers(channel[3], channel[3])
+        self.conv3_2 = conv_layers(channel[3], channel[3])
+        self.conv3_3 = conv_layers(channel[3], channel[3])
+
+        self.pool3 = pool_layers()
+        if transform:
+            self.transform4_0 = feature_transform(channel[3], 512)
+
+        self.conv4_0 = conv_layers(channel[3], channel[3])
+        self.conv4_1 = conv_layers(channel[3], channel[3])
+        self.conv4_2 = conv_layers(channel[3], channel[3])
+        self.conv4_3 = conv_layers(channel[3], channel[3])
+
+        self.pool4 = pool_layers()
+        if transform:
+            self.transform5_0 = feature_transform(channel[3], 512)
+
+        self._initialize_weights()
+        self.features = []
+
+        d_model = channel[3]
             
         nhead = 2
         num_layers = 4
@@ -286,22 +337,62 @@ class MAN(nn.Module):
 
         self.encoder = TransformerEncoder(encoder_layer, num_layers, if_norm)
         self.reg_layer_0 = nn.Sequential(
-            nn.Conv2d(d_model, 256, kernel_size=3, padding=1),
+            nn.Conv2d(d_model, channel[2], kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(256, 128, kernel_size=3, padding=1),
+            nn.Conv2d(channel[2], channel[1], kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, 1, 1)
+            nn.Conv2d(channel[1], 1, 1)
         )
 
     def forward(self, x):
         b, c, h, w = x.shape
         rh = int(h) // 16
         rw = int(w) // 16
+ 
+        self.features = []
+
+        x = self.conv0_0(x)
+        if self.transform:
+            self.features.append(self.transform0_0(x))
+        x = self.conv0_1(x)
+
+        x = self.pool0(x)
+        if self.transform:
+            self.features.append(self.transform1_0(x))
+
+        x = self.conv1_0(x)
+        x = self.conv1_1(x)
+
+        x = self.pool1(x)
+        if self.transform:
+            self.features.append(self.transform2_0(x))
+
+        x = self.conv2_0(x)
+        x = self.conv2_1(x)
+        x = self.conv2_2(x)
+        x = self.conv2_3(x)
+
+        x = self.pool2(x)
+        if self.transform:
+            self.features.append(self.transform3_0(x))
+
+        x = self.conv3_0(x)
+        x = self.conv3_1(x)
+        x = self.conv3_2(x)
+        x = self.conv3_3(x)
+
+        if self.transform:
+            self.features.append(self.transform4_0(x))
         
-        if ("efficientnet" in BACKBONE_MODEL):
-            x = self.features.forward_features(x)
-        else:
-            x = self.features(x)   # vgg network
+        x = self.conv4_0(x)
+        x = self.conv4_1(x)
+        x = self.conv4_2(x)
+        x = self.conv4_3(x)
+
+        if self.transform:
+            self.features.append(self.transform5_0(x))
+
+        self.features.append(x)
         
         bs, c, h, w = x.shape
         x = x.flatten(2).permute(2, 0, 1)
@@ -310,4 +401,43 @@ class MAN(nn.Module):
         
         x = F.upsample_bilinear(x, size=(rh, rw))
         x = self.reg_layer_0(x)   # regression head
+
+        # if self.training is True:
+        #     return self.features, features
+        
         return torch.relu(x), features
+    
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                # nn.init.xavier_normal_(m.weight)
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                # nn.init.normal_(m.weight, std=0.01)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+    
+def conv_layers(inp, oup, dilation=False):
+    if dilation:
+        d_rate = 2
+    else:
+        d_rate = 1
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, kernel_size=3, padding=d_rate, dilation=d_rate),
+        nn.ReLU(inplace=True)
+    )
+
+
+def feature_transform(inp, oup):
+    conv2d = nn.Conv2d(inp, oup, kernel_size=1)  # no padding
+    relu = nn.ReLU(inplace=True)
+    layers = []
+    layers += [conv2d, relu]
+    return nn.Sequential(*layers)
+
+
+def pool_layers(ceil_mode=True):
+    return nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=ceil_mode)
+    # return nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=ceil_mode)
