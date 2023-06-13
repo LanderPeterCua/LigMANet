@@ -23,6 +23,8 @@ from sklearn.metrics import mean_squared_error,mean_absolute_error
 from tqdm import tqdm as tqdm
 from matplotlib import pyplot as plt
 
+import xlsxwriter
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
@@ -406,24 +408,46 @@ class CANSolverPruned(object):
         f.close()
 
         # save the original image, GT density map, and generated density maps into a folder
-        # print('Saving density maps...')
-        # for n in tqdm(range(len(images))):
-        #     f = plt.figure()
-        #     f.add_subplot(1,3,1).set_title('Original Image')
-        #     plt.imshow(images[n])
-        #     text = plt.text(0, 0, 'actual: {} ({})\npredicted: {} ({})\n\n'.format(round(gt[n]), str(gt[n]), round(pred[n]), str(pred[n])))
-        #     f.add_subplot(1,3,2).set_title('Ground Truth Density Map')
-        #     plt.imshow(density_maps_gt[n])
-        #     f.add_subplot(1,3,3).set_title('Generated Density Map')
-        #     f.set_size_inches(20, 5)
-        #     plt.imshow(density_maps_generated[n])
+        print('Saving density maps and creating summary sheet...')
 
-        #     # for local saving
-        #     filename = os.path.join(self.tests_save_path, img_paths[n].split('\\')[-1])
+        workbook = xlsxwriter.Workbook(self.config.weights.split("/")[1] + '.xlsx')
+        print("Saving into sheet:", self.config.weights.split("/")[1] + '.xlsx')
 
-        #     # for jupyterhub saving
-        #     # filename = os.path.join(self.tests_save_path, img_paths[n].split('/')[-1])
+        worksheet = workbook.add_worksheet()
+        row = 0
+        column = 0
+        worksheet.write(row, column, "Ground Truth")
+        worksheet.write(row, column + 1, "Predicted Count")
+        worksheet.write(row, column + 2, "Absolute Difference")
+        worksheet.write(row, column + 3, "Error Rate")
 
-        #     f.savefig(filename)
-        #     text.set_visible(False)
-        #     plt.close()
+        for n in tqdm(range(len(images))):
+            
+            # save density map
+            f = plt.figure()
+            f.add_subplot(1,3,1).set_title('Original Image')
+            plt.imshow(images[n])
+            text = plt.text(0, 0, 'actual: {} ({})\npredicted: {} ({})\n\n'.format(round(gt[n]), str(gt[n]), round(pred[n]), str(pred[n])))
+            f.add_subplot(1,3,2).set_title('Ground Truth Density Map')
+            plt.imshow(density_maps_gt[n])
+            f.add_subplot(1,3,3).set_title('Generated Density Map')
+            f.set_size_inches(20, 5)
+            plt.imshow(density_maps_generated[n])
+
+            # for local saving
+            filename = os.path.join(self.tests_save_path, img_paths[n].split('\\')[-1])
+
+            # for jupyterhub saving
+            # filename = os.path.join(self.tests_save_path, img_paths[n].split('/')[-1])
+
+            f.savefig(filename)
+            text.set_visible(False)
+            plt.close()
+
+            # input into summary sheet
+            worksheet.write(row + n + 1, column, gt[n])
+            worksheet.write(row + n + 1, column + 1, pred[n])
+            worksheet.write(row + n + 1, column + 2, abs(pred[n] - gt[n]))
+            worksheet.write(row + n + 1, column + 3, abs(pred[n] - gt[n])/gt[n]*100)
+            
+        workbook.close()

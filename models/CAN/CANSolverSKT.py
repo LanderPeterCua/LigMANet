@@ -27,6 +27,8 @@ from matplotlib import pyplot as plt
 
 from compression.skt_utils import cal_para, cosine_similarity, scale_process_CAN, cal_dense_fsp
 
+import xlsxwriter
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
@@ -440,8 +442,22 @@ class CANSolverSKT(object):
         f.close()
 
         # save the original image, GT density map, and generated density maps into a folder
-        print('Saving density maps...')
+        print('Saving density maps and creating summary sheet...')
+
+        workbook = xlsxwriter.Workbook(self.config.weights.split("/")[1] + '.xlsx')
+        print("Saving into sheet:", self.config.weights.split("/")[1] + '.xlsx')
+
+        worksheet = workbook.add_worksheet()
+        row = 0
+        column = 0
+        worksheet.write(row, column, "Ground Truth")
+        worksheet.write(row, column + 1, "Predicted Count")
+        worksheet.write(row, column + 2, "Absolute Difference")
+        worksheet.write(row, column + 3, "Error Rate")
+
         for n in tqdm(range(len(images))):
+
+            # save density map
             f = plt.figure()
             f.add_subplot(1,3,1).set_title('Original Image')
             plt.imshow(images[n])
@@ -461,6 +477,14 @@ class CANSolverSKT(object):
             f.savefig(filename)
             text.set_visible(False)
             plt.close()
+
+            # input into summary sheet
+            worksheet.write(row + n + 1, column, gt[n])
+            worksheet.write(row + n + 1, column + 1, pred[n])
+            worksheet.write(row + n + 1, column + 2, abs(pred[n] - gt[n]))
+            worksheet.write(row + n + 1, column + 3, abs(pred[n] - gt[n])/gt[n]*100)
+            
+        workbook.close()
 
 def print_num_params(model):
     '''
