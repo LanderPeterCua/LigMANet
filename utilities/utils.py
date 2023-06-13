@@ -6,6 +6,8 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
+import xlsxwriter
+
 
 def to_var(x, use_gpu, requires_grad=False):
     """Toggles the use of cuda of a Tensor variable
@@ -83,6 +85,20 @@ def save_plots(file_path, output, labels, ids, save_label=False):
     dm_file_path = os.path.join(dm_file_path, '%s')
     img_dest_path = dm_file_path.replace("density maps", "images")
 
+    # save the original image, GT density map, and generated density maps into a folder
+    print('Saving density maps and creating summary sheet...')
+
+    workbook = xlsxwriter.Workbook(file_path.split("/")[-1] + '.xlsx')
+    print("Saving into sheet:", file_path.split("/")[-1] + '.xlsx')
+
+    worksheet = workbook.add_worksheet()
+    row = 0
+    column = 0
+    worksheet.write(row, column, "Ground Truth")
+    worksheet.write(row, column + 1, "Predicted Count")
+    worksheet.write(row, column + 2, "Absolute Difference")
+    worksheet.write(row, column + 3, "Error Rate")
+
     for i in range(0, len(ids)):
         # # save image
         # img_file_name = img_file_path % (ids[i])
@@ -122,6 +138,14 @@ def save_plots(file_path, output, labels, ids, save_label=False):
         plt.savefig(file_name2)
 
         text.set_visible(False)
+
+        # input into summary sheet
+        worksheet.write(row + i + 1, column, gt_count)
+        worksheet.write(row + i + 1, column + 1, et_count)
+        worksheet.write(row + i + 1, column + 2, abs(et_count - gt_count))
+        worksheet.write(row + i + 1, column + 3, abs(et_count - gt_count)/gt_count*100)
+        
+    workbook.close()
 
 def get_amp_gt_by_value(target, threshold=1e-5):
     """Creates the attention map groundtruth used by MARUNet
