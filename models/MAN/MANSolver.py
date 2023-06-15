@@ -360,7 +360,10 @@ class MANSolver(Trainer):
         epoch_start = time.time()
         args = args
 
-        datasets = Crowd(os.path.join(args.data_dir, 'test'), 256, 8, args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, method='test')
+        datasets = Crowd(os.path.join(args.data_dir, 'test'),
+                                  args.crop_size,
+                                  args.downsample_ratio,
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, method='test')
 
         dataloader = torch.utils.data.DataLoader(datasets, 1, shuffle=False,
                                                  num_workers=8, pin_memory=False)

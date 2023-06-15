@@ -77,10 +77,10 @@ class Config(object):
         self.num_epochs = 1200            
         self.batch_size = 1    
         self.use_gpu = True
-        self.weights = "weights/VGG19-ShanghaiTech-A/best_model_9.pth"
+        self.weights = None
 
         self.compression = True
-        self.compression_technique = "SKT" # [pruning, SKT]
+        self.compression_technique = "Pruning" # [pruning, SKT]
         self.lamb_fsp = None
         self.lamb_cos = None
         self.SKT_teacher_ckpt = "weights/0410-174037/916_teacher_ckpt.tar"
@@ -158,7 +158,10 @@ def parse_args(config, paths):
               dataset_path = paths.man_ucf_cc_50
         else:
               dataset_path = paths.man_ucf_qnrf
-              
+        
+        #FOR FAILURE CASE ANALYSIS ONLY
+        #dataset_path = '../Datasets/Failure Cases/Scenes with Varying Regions of Density/UCF-CC-50/'
+        
         parser = argparse.ArgumentParser(description=config.mode)
         parser.add_argument('--model-name', default=config.model, help='the name of the model')
         parser.add_argument('--dataset-name', default=config.dataset, help='the name of the dataset')
@@ -196,9 +199,9 @@ def parse_args(config, paths):
                             help='the crop size of the train image')
         parser.add_argument('--downsample-ratio', type=int, default=16,
                             help='downsample ratio')
-        parser.add_argument('--augment-contrast', type=bool, default=False,
+        parser.add_argument('--augment-contrast', type=bool, default=True,
                             help='whether to apply contrast enhancement on images')
-        parser.add_argument('--augment-contrast-factor', type=float, default=1,
+        parser.add_argument('--augment-contrast-factor', type=float, default=0.5,
                             help='Contrast enhancment factor')
 
         parser.add_argument('--use-background', type=bool, default=True,

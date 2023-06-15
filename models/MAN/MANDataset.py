@@ -9,7 +9,6 @@ import random
 import numpy as np
 from utilities.augmentations import enhance_contrast
 
-
 def random_crop(im_h, im_w, crop_h, crop_w):
     res_h = im_h - crop_h
     res_w = im_w - crop_w
@@ -98,9 +97,8 @@ class Crowd(data.Dataset):
 
     def train_transform(self, img, keypoints):
         """Perform contrast enhancement if enabled"""
-        if (self.contrast):
+        if self.contrast == True:
             img = enhance_contrast(img, self.contrast_factor)
-            
         """random crop image patch and find people in it"""
         wd, ht = img.size
         assert len(keypoints) > 0
