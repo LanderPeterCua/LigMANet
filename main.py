@@ -196,6 +196,10 @@ def parse_args(config, paths):
                             help='the crop size of the train image')
         parser.add_argument('--downsample-ratio', type=int, default=16,
                             help='downsample ratio')
+        parser.add_argument('--augment-contrast', type=bool, default=False,
+                            help='whether to apply contrast enhancement on images')
+        parser.add_argument('--augment-contrast-factor', type=float, default=1,
+                            help='Contrast enhancment factor')
 
         parser.add_argument('--use-background', type=bool, default=True,
                             help='whether to use background modelling')

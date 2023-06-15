@@ -7,6 +7,7 @@ import torchvision.transforms.functional as F
 from torchvision import transforms
 import random
 import numpy as np
+from utilities.augmentations import enhance_contrast
 
 
 def random_crop(im_h, im_w, crop_h, crop_w):
@@ -30,7 +31,10 @@ def cal_innner_area(c_left, c_up, c_right, c_down, bbox):
 class Crowd(data.Dataset):
     def __init__(self, root_path, crop_size,
                  downsample_ratio, 
-                 dataset, cc_50_val, cc_50_test, is_gray, method):
+                 dataset, cc_50_val, cc_50_test, is_gray, augment_contrast, augment_contrast_factor, method):
+        
+        self.contrast = augment_contrast
+        self.contrast_factor = augment_contrast_factor
         
         if dataset != 'UCFCC50':
             self.root_path = root_path
@@ -93,6 +97,10 @@ class Crowd(data.Dataset):
             return img, len(keypoints), name
 
     def train_transform(self, img, keypoints):
+        """Perform contrast enhancement if enabled"""
+        if (self.contrast):
+            img = enhance_contrast(img, self.contrast_factor)
+            
         """random crop image patch and find people in it"""
         wd, ht = img.size
         assert len(keypoints) > 0

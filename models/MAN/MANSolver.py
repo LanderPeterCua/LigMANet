@@ -94,7 +94,7 @@ class MANSolver(Trainer):
         self.datasets = {x: Crowd(os.path.join(args.data_dir, x),
                                   args.crop_size,
                                   args.downsample_ratio,
-                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, x) for x in ['train', 'test']}
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, x) for x in ['train', 'test']}
             
         self.dataloaders = {x: DataLoader(self.datasets[x],
                                           collate_fn=(train_collate
