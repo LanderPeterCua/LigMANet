@@ -64,7 +64,7 @@ class Config(object):
     def __init__(self):
         self.mode = "Train"                 
         self.model = "MAN"              
-        self.dataset = "UCFCC50" # [Shanghaitech-A, Shanghaitech-B, UCFCC50, UCFQNRF] 
+        self.dataset = "Shanghaitech-A" # [Shanghaitech-A, Shanghaitech-B, UCFCC50, UCFQNRF] 
         self.cc50_val = 3 # [1, 2, 3, 4, 5]
         self.cc50_test = 5 # [1, 2, 3, 4, 5]
         
@@ -199,10 +199,13 @@ def parse_args(config, paths):
                             help='the crop size of the train image')
         parser.add_argument('--downsample-ratio', type=int, default=16,
                             help='downsample ratio')
+        
         parser.add_argument('--augment-contrast', type=bool, default=True,
                             help='whether to apply contrast enhancement on images')
         parser.add_argument('--augment-contrast-factor', type=float, default=0.5,
                             help='Contrast enhancment factor')
+        parser.add_argument('--augment-save', type=bool, default=True, help='whether to save augmented images')
+        parser.add_argument('--augment-save-location', default="../AugmentDatasets/ShanghaiTechA/", help='save folder of augmented images')
 
         parser.add_argument('--use-background', type=bool, default=True,
                             help='whether to use background modelling')

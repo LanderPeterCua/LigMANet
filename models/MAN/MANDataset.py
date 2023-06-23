@@ -6,8 +6,9 @@ import torch
 import torchvision.transforms.functional as F
 from torchvision import transforms
 import random
+import re
 import numpy as np
-from utilities.augmentations import enhance_contrast
+from utilities.augmentations import enhance_contrast, save_image
 
 def random_crop(im_h, im_w, crop_h, crop_w):
     res_h = im_h - crop_h
@@ -30,10 +31,13 @@ def cal_innner_area(c_left, c_up, c_right, c_down, bbox):
 class Crowd(data.Dataset):
     def __init__(self, root_path, crop_size,
                  downsample_ratio, 
-                 dataset, cc_50_val, cc_50_test, is_gray, augment_contrast, augment_contrast_factor, method):
+                 dataset, cc_50_val, cc_50_test, is_gray, augment_contrast, augment_contrast_factor, augment_save_location,
+                 augment_save, method):
         
         self.contrast = augment_contrast
         self.contrast_factor = augment_contrast_factor
+        self.augment_save = augment_save
+        self.augment_save_location = augment_save_location
         
         if dataset != 'UCFCC50':
             self.root_path = root_path
@@ -88,17 +92,20 @@ class Crowd(data.Dataset):
             print(os.path.basename(img_path).split('.')[0])
         if self.method == 'train':
             keypoints = np.load(gd_path)
-            return self.train_transform(img, keypoints)
+            return self.train_transform(img, keypoints, int(re.search(r'\d+',img_path.split('/')[-1]).group()))
         elif self.method == 'val' or self.method == 'test':
             keypoints = np.load(gd_path)
             img = self.trans(img)
             name = os.path.basename(img_path).split('.')[0]
             return img, len(keypoints), name
 
-    def train_transform(self, img, keypoints):
+    def train_transform(self, img, keypoints, img_path):
         """Perform contrast enhancement if enabled"""
         if self.contrast == True:
             img = enhance_contrast(img, self.contrast_factor)
+            if self.augment_save == True:
+                filename = "IMG_"+(str(img_path+len(self.im_list)))
+                save_image(img, self.augment_save_location, filename)
         """random crop image patch and find people in it"""
         wd, ht = img.size
         assert len(keypoints) > 0

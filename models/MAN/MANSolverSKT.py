@@ -97,7 +97,7 @@ class MANSolverSKT(Trainer):
         self.datasets = {x: Crowd(os.path.join(args.data_dir, x),
                                   args.crop_size,
                                   args.downsample_ratio,
-                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, x) for x in ['train', 'val']}
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, args.augment_save_location, args.augment_save, x) for x in ['train', 'val']}
             
         self.dataloaders = {x: DataLoader(self.datasets[x],
                                           collate_fn=(train_collate
@@ -466,7 +466,7 @@ class MANSolverSKT(Trainer):
         datasets = Crowd(os.path.join(args.data_dir, 'test'),
                                   args.crop_size,
                                   args.downsample_ratio,
-                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, method='test')
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, args.augment_save_location, augment_save, method='test')
 
         dataloader = torch.utils.data.DataLoader(datasets, 1, shuffle=False,
                                                  num_workers=8, pin_memory=False)
