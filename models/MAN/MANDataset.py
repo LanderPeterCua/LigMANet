@@ -8,7 +8,7 @@ from torchvision import transforms
 import random
 import re
 import numpy as np
-from utilities.augmentations import enhance_contrast, save_image, save_gt
+from utilities.augmentations import enhance_contrast, save_image
 
 def random_crop(im_h, im_w, crop_h, crop_w):
     """ Performs random cropping on the input image

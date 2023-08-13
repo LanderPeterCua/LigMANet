@@ -48,7 +48,6 @@ class Paths(object):
         self.man_shanghaitech_b = '../Datasets/ShanghaiTechBPreprocessed/'
         self.man_ucf_cc_50 = '../Datasets/UCF-CC-50Preprocessed/folds/'
 
-# TODO Add parameters to the constructor during THS-ST3 so that users can utilize the pipeline without changing the code
 class Config(object):
     def __init__(self):
         """ Initializes a Config object
@@ -74,8 +73,8 @@ class Config(object):
         """
         self.mode = "Test"                 
         self.model = "MAN"              
-        self.dataset = "UCFCC50" # [Shanghaitech-A, Shanghaitech-B, UCFCC50, UCFQNRF] 
-        self.cc50_val = 2 # [1, 2, 3, 4, 5]
+        self.dataset = "Shanghaitech-A" # [Shanghaitech-A, Shanghaitech-B, UCFCC50, UCFQNRF] 
+        self.cc50_val = 3 # [1, 2, 3, 4, 5]
         self.cc50_test = 5 # [1, 2, 3, 4, 5]
 
         self.lr = 5e-6
@@ -190,92 +189,100 @@ def parse_args(config, paths):
         config {Object} -- Config object containing the specified configurations
         paths {Object} -- Paths object containing the specified paths
     """
-        config = config
-        paths = paths
-        
-        # Dataset paths for MAN
-        if (config.dataset == "Shanghaitech-A"):
-            dataset_path = paths.man_shanghaitech_a
-        elif (config.dataset == "Shanghaitech-B"):
-            dataset_path = paths.man_shanghaitech_b
-        elif (config.dataset == "UCFCC50"):
-              dataset_path = paths.man_ucf_cc_50
-        else:
-              dataset_path = paths.man_ucf_qnrf
-        
-        parser = argparse.ArgumentParser(description=config.mode)
-        
-        # Training details
-        parser.add_argument('--model-name', default=config.model, help='the name of the model')
-        parser.add_argument('--dataset-name', default=config.dataset, help='the name of the dataset')
-        parser.add_argument('--data-dir', default=dataset_path,
-                            help='training data directory')
-        parser.add_argument('--cc-50-val', default=config.cc50_val, help='fold number to use as validation set for cc50')
-        parser.add_argument('--cc-50-test', default=config.cc50_test, help='fold number to use as test set for cc50')
-        parser.add_argument('--save-dir', default=paths.weights,
-                            help='directory to save models.')
-        parser.add_argument('--save-all', type=bool, default=True,
-                            help='whether to save all best model')
-        parser.add_argument('--lr', type=float, default=config.lr,
-                            help='the initial learning rate')
-        parser.add_argument('--weight-decay', type=float, default=config.weight_decay,
-                            help='the weight decay')
-        parser.add_argument('--resume', default=None,
-                            help='the path of resume training model')
-        parser.add_argument('--max-model-num', type=int, default=2,
-                            help='max models num to save ')
-        parser.add_argument('--max-epoch', type=int, default=config.num_epochs,
-                            help='max training epoch')
-        parser.add_argument('--val-epoch', type=int, default=1,
-                            help='the num of steps to log training information')
-        parser.add_argument('--val-start', type=int, default=600,
-                            help='the epoch start to val')
-        parser.add_argument('--batch-size', type=int, default=config.batch_size,
-                            help='train batch size')
-        parser.add_argument('--device', default='1', help='assign device')
-        parser.add_argument('--num-workers', type=int, default=8,
-                            help='the num of training process')
-        parser.add_argument('--is-gray', type=bool, default=False,
-                            help='whether the input image is gray')
-        parser.add_argument('--crop-size', type=int, default=256,
-                            help='the crop size of the train image')
-        parser.add_argument('--downsample-ratio', type=int, default=16,
-                            help='downsample ratio')
-        parser.add_argument('--use-background', type=bool, default=True,
-                            help='whether to use background modelling')
-        parser.add_argument('--sigma', type=float, default=8.0,
-                            help='sigma for likelihood')
-        parser.add_argument('--background-ratio', type=float, default=0.15,
-                            help='background ratio')
-        parser.add_argument('--best-model-path', default=config.weights,
-                            help='best model path')
-        parser.add_argument('--learning-sched', default = config.learning_sched,
-                            help='number of epochs for warmup learning')
-        
-        # Contrast enhancement
-        parser.add_argument('--augment-contrast', type=bool, default=False,
-                            help='whether to apply contrast enhancement on images')
-        parser.add_argument('--augment-contrast-factor', type=float, default=0.5,
-                            help='Contrast enhancement factor')
-        parser.add_argument('--augment-save', type=bool, default=True, help='whether to save augmented images')
-        parser.add_argument('--augment-save-location', default="../AugmentDatasets/ShanghaiTechB/", help='save folder of augmented images')
-        
-        # Model compression
-        parser.add_argument('--compression', default = config.compression,
-                            help='whether compression is to be implemented')
-        parser.add_argument('--compression-technique', default = config.compression_technique,
-                            help='compression technique to be used')
-        parser.add_argument('--lamb-fsp', default = config.lamb_fsp,
-                            help='weight of dense fsp loss')
-        parser.add_argument('--lamb-cos', default = config.lamb_fsp,
-                            help='weight of cos loss')
-        parser.add_argument('--teacher_ckpt', default = config.SKT_teacher_ckpt,
-                            help='SKT teacher checkpoint')
-        parser.add_argument('--student_ckpt', default = config.SKT_student_ckpt,
-                            help='SKT student checkpoint')
+    config = config
+    paths = paths
     
-        args = parser.parse_args()
-        return args
+    # Dataset paths for MAN
+    if (config.dataset == "Shanghaitech-A"):
+        dataset_path = paths.man_shanghaitech_a
+    elif (config.dataset == "Shanghaitech-B"):
+        dataset_path = paths.man_shanghaitech_b
+    elif (config.dataset == "UCFCC50"):
+            dataset_path = paths.man_ucf_cc_50
+    else:
+            dataset_path = paths.man_ucf_qnrf
+    
+    parser = argparse.ArgumentParser(description=config.mode)
+    
+    # Training details
+    parser.add_argument('--model-name', default=config.model, help='the name of the model')
+    parser.add_argument('--dataset-name', default=config.dataset, help='the name of the dataset')
+    parser.add_argument('--data-dir', default=dataset_path,
+                        help='training data directory')
+    parser.add_argument('--cc-50-val', default=config.cc50_val, help='fold number to use as validation set for cc50')
+    parser.add_argument('--cc-50-test', default=config.cc50_test, help='fold number to use as test set for cc50')
+    parser.add_argument('--save-dir', default=paths.weights,
+                        help='directory to save models.')
+    parser.add_argument('--save-all', type=bool, default=True,
+                        help='whether to save all best model')
+    parser.add_argument('--lr', type=float, default=config.lr,
+                        help='the initial learning rate')
+    parser.add_argument('--weight-decay', type=float, default=config.weight_decay,
+                        help='the weight decay')
+    parser.add_argument('--resume', default=None,
+                        help='the path of resume training model')
+    parser.add_argument('--max-model-num', type=int, default=2,
+                        help='max models num to save ')
+    parser.add_argument('--max-epoch', type=int, default=config.num_epochs,
+                        help='max training epoch')
+    parser.add_argument('--val-epoch', type=int, default=1,
+                        help='the num of steps to log training information')
+    parser.add_argument('--val-start', type=int, default=600,
+                        help='the epoch start to val')
+    parser.add_argument('--batch-size', type=int, default=config.batch_size,
+                        help='train batch size')
+    parser.add_argument('--device', default='1', help='assign device')
+    parser.add_argument('--num-workers', type=int, default=8,
+                        help='the num of training process')
+    parser.add_argument('--is-gray', type=bool, default=False,
+                        help='whether the input image is gray')
+    parser.add_argument('--crop-size', type=int, default=256,
+                        help='the crop size of the train image')
+    parser.add_argument('--downsample-ratio', type=int, default=16,
+                        help='downsample ratio')
+    
+    parser.add_argument('--augment-contrast', type=bool, default=True,
+                        help='whether to apply contrast enhancement on images')
+    parser.add_argument('--augment-contrast-factor', type=float, default=0.5,
+                        help='Contrast enhancment factor')
+    parser.add_argument('--augment-save', type=bool, default=True, help='whether to save augmented images')
+    parser.add_argument('--augment-save-location', default="../AugmentDatasets/ShanghaiTechA/", help='save folder of augmented images')
+
+    parser.add_argument('--use-background', type=bool, default=True,
+                        help='whether to use background modelling')
+    parser.add_argument('--sigma', type=float, default=8.0,
+                        help='sigma for likelihood')
+    parser.add_argument('--background-ratio', type=float, default=0.15,
+                        help='background ratio')
+    parser.add_argument('--best-model-path', default=config.weights,
+                        help='best model path')
+    parser.add_argument('--learning-sched', default = config.learning_sched,
+                        help='number of epochs for warmup learning')
+    
+    # Contrast enhancement
+    parser.add_argument('--augment-contrast', type=bool, default=False,
+                        help='whether to apply contrast enhancement on images')
+    parser.add_argument('--augment-contrast-factor', type=float, default=0.5,
+                        help='Contrast enhancement factor')
+    parser.add_argument('--augment-save', type=bool, default=True, help='whether to save augmented images')
+    parser.add_argument('--augment-save-location', default="../AugmentDatasets/ShanghaiTechB/", help='save folder of augmented images')
+    
+    # Model compression
+    parser.add_argument('--compression', default = config.compression,
+                        help='whether compression is to be implemented')
+    parser.add_argument('--compression-technique', default = config.compression_technique,
+                        help='compression technique to be used')
+    parser.add_argument('--lamb-fsp', default = config.lamb_fsp,
+                        help='weight of dense fsp loss')
+    parser.add_argument('--lamb-cos', default = config.lamb_fsp,
+                        help='weight of cos loss')
+    parser.add_argument('--teacher_ckpt', default = config.SKT_teacher_ckpt,
+                        help='SKT teacher checkpoint')
+    parser.add_argument('--student_ckpt', default = config.SKT_student_ckpt,
+                        help='SKT student checkpoint')
+
+    args = parser.parse_args()
+    return args
 
 if __name__ == '__main__':
     main()
