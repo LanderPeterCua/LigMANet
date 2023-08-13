@@ -32,6 +32,17 @@ __all__ = ['vgg19_trans']
 model_urls = {'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'}
 
 def train_collate(batch):
+    """ Collates the relevant details of the batch of input images for model training
+    
+    Arguments:
+        batch {list} -- batch of input images
+        
+    Returns:
+        torch.Tensor -- tensor representation of the list of input images
+        list -- list of tensor representations of the ground truth density maps
+        list -- list of tensor representations of the generated density maps
+        torch.FloatTensor -- tensor representation of the list of minimum dimensions of the input images
+    """
     transposed_batch = list(zip(*batch))
     images = torch.stack(transposed_batch[0], 0)
     points = transposed_batch[1]  # the number of points is not fixed, keep it as a list of tensor
@@ -40,6 +51,17 @@ def train_collate(batch):
     return images, points, targets, st_sizes
 
 def make_layers(cfg, batch_norm=False):
+    """ Creates the layers of the model
+    
+    Arguments:
+        cfg {list} -- number of channels per layer of the model
+
+    Keyword Arguments:
+        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
+
+    Returns:
+        nn.Sequential -- Sequential container storing the layers of the model
+    """
     layers = []
     in_channels = 3
     for v in cfg:
@@ -55,16 +77,19 @@ def make_layers(cfg, batch_norm=False):
     return nn.Sequential(*layers)
 
 def init_MAN():
-    """VGG 19-layer model (configuration "E")
-        model pre-trained on ImageNet
+    """ Initializes the MAN model with the appropriate backbone network
+    
+    Returns:
+        Object -- initialized model
     """
-
+    # For EfficientNet backbones, download the corresponding model from the Hugging Face repository
     if (BACKBONE_MODEL == "efficientnet-b0"):
         model = MAN(timm.create_model('tf_efficientnet_b0', pretrained=True))
     elif (BACKBONE_MODEL == "efficientnet-b3"):
         model = MAN(timm.create_model('tf_efficientnet_b3', pretrained=True))
     elif (BACKBONE_MODEL == "efficientnet-b5"):
         model = MAN(timm.create_model('tf_efficientnet_b5', pretrained=True))
+    # For the VGG-19 backbone, use the VGG 19-layer model (configuration "E") pre-trained on ImageNet
     else:
         model = MAN(make_layers(cfg['E']))
         model.load_state_dict(model_zoo.load_url(model_urls['vgg19']), strict=False)
@@ -72,7 +97,8 @@ def init_MAN():
     
 class MANSolver(Trainer):
     def setup(self):
-        """initial the datasets, model, loss and optimizer"""
+        """ Initializes the datasets, model, loss, and optimizer
+        """
         args = self.args
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
@@ -94,7 +120,7 @@ class MANSolver(Trainer):
         self.datasets = {x: Crowd(os.path.join(args.data_dir, x),
                                   args.crop_size,
                                   args.downsample_ratio,
-                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, x) for x in ['train', 'test']}
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, args.augment_save_location, args.augment_save, x) for x in ['train', 'test']}
             
         self.dataloaders = {x: DataLoader(self.datasets[x],
                                           collate_fn=(train_collate
@@ -142,7 +168,8 @@ class MANSolver(Trainer):
         self.best_count = 0
 
     def train(self):
-        """training process"""
+        """ Performs model training
+        """
         args = self.args
         
         #ADDED VARIABLE INITIALIZATION FOR WARMUP LEARNING
@@ -155,12 +182,10 @@ class MANSolver(Trainer):
             self.train_epoch()
             if epoch % args.val_epoch == 0 and epoch >= args.val_start:
                 self.val_epoch()
-            """
-            elif self.epoch % 20 == 0:
-                self.val_epoch_monitor()
-            """
       
     def train_epoch(self):
+        """ Performs a single epoch of model training
+        """
         epoch_loss = AverageMeter()
         epoch_mae = AverageMeter()
         epoch_mse = AverageMeter()
@@ -238,6 +263,8 @@ class MANSolver(Trainer):
                 torch.save(model_state_dic, os.path.join(self.save_dir, 'best_model.pth'))
         
     def val_epoch(self):
+        """ Performs model validation
+        """
         epoch_start = time.time()
         self.model.eval()  # Set model to evaluate mode
         epoch_res = []
@@ -301,69 +328,19 @@ class MANSolver(Trainer):
             else:
                 torch.save(model_state_dic, os.path.join(self.save_dir, 'best_model.pth'))
     
-    def val_epoch_monitor(self):
-        epoch_start = time.time()
-        self.model.eval()  # Set model to evaluate mode
-        epoch_res = []
-        # Iterate over data.
-        for inputs, count, name in self.dataloaders['test']:
-            inputs = inputs.to(self.device)
-            # inputs are images with different sizes
-            b, c, h, w = inputs.shape
-            h, w = int(h), int(w)
-            assert b == 1, 'the batch size should equal to 1 in validation mode'
-            input_list = []
-            if h >= 3584 or w >= 3584:
-                h_stride = int(ceil(1.0 * h / 3584))
-                w_stride = int(ceil(1.0 * w / 3584))
-                h_step = h // h_stride
-                w_step = w // w_stride
-                for i in range(h_stride):
-                    for j in range(w_stride):
-                        h_start = i * h_step
-                        if i != h_stride - 1:
-                            h_end = (i + 1) * h_step
-                        else:
-                            h_end = h
-                        w_start = j * w_step
-                        if j != w_stride - 1:
-                            w_end = (j + 1) * w_step
-                        else:
-                            w_end = w
-                        input_list.append(inputs[:, :, h_start:h_end, w_start:w_end])
-                with torch.set_grad_enabled(False):
-                    pre_count = 0.0
-                    for idx, input in enumerate(input_list):
-                        output = self.model(input)[0]
-                        pre_count += torch.sum(output)
-                res = count[0].item() - pre_count.item()
-                epoch_res.append(res)
-            else:
-                with torch.set_grad_enabled(False):
-                    outputs = self.model(inputs)[0]
-                    # save_results(inputs, outputs, self.vis_dir, '{}.jpg'.format(name[0]))
-                    res = count[0].item() - torch.sum(outputs).item()
-                    epoch_res.append(res)
-
-        epoch_res = np.array(epoch_res)
-        mse = np.sqrt(np.mean(np.square(epoch_res)))
-        mae = np.mean(np.abs(epoch_res))
-        logging.info('Epoch {} Val, MSE: {:.2f} MAE: {:.2f}, Cost {:.1f} sec'
-                     .format(self.epoch, mse, mae, time.time()-epoch_start))
-
-        model_state_dic = self.model.state_dict()
-        logging.info("best mse {:.2f} mae {:.2f}".format(self.best_mse, self.best_mae))
-        torch.save(model_state_dic, os.path.join(self.save_dir, 'train_model_{}.pth'.format(self.epoch)))
-
-                
     def test(self, args):
+        """ Performs model testing
+        
+        Arguments:
+            args {Object} -- arguments used by the model
+        """
         epoch_start = time.time()
         args = args
 
         datasets = Crowd(os.path.join(args.data_dir, 'test'),
                                   args.crop_size,
                                   args.downsample_ratio,
-                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, method='test')
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, args.augment_save_location, args.augment_save, method='test')
 
         dataloader = torch.utils.data.DataLoader(datasets, 1, shuffle=False,
                                                  num_workers=8, pin_memory=False)

@@ -23,17 +23,28 @@ from tqdm import tqdm as tqdm
 from matplotlib import pyplot as plt
 
 class AverageMeter(object):
-    """Computes and stores the average and current value"""
     def __init__(self):
+        """ Initializes an AverageMeter object
+        """
         self.reset()
 
     def reset(self):
+        """ Resets the values of the AverageMeter object
+        """
         self.val = 0
         self.avg = 0
         self.sum = 0
         self.count = 0
 
     def update(self, val, n=1):
+        """ Updates the values of the AverageMeter object
+        
+        Arguments:
+            val {int} -- value of val
+
+        Keyword Arguments:
+            n {int} -- value of n {default: 1}
+        """
         self.val = val
         self.sum += val * n
         self.count += n
@@ -41,8 +52,14 @@ class AverageMeter(object):
 
 
 class CANSolver(object):
-
     def __init__(self, config, paths):
+        """
+        Initializes a CAN Solver object
+
+        Arguments:
+            config {Object} -- configurations of the model
+            paths {Object} -- paths to the resources used by the model  
+        """
         self.config = config
         self.paths = paths
         self.lr = self.config.lr
@@ -54,6 +71,8 @@ class CANSolver(object):
         self.build_model()
 
     def build_model(self):
+        """ Instantiates the model, loss criterion, and optimizer
+        """
         self.model = CANNet()
         self.criterion = nn.MSELoss(size_average=False)
 #         self.criterion = nn.L1Loss()
@@ -82,6 +101,11 @@ class CANSolver(object):
         print(self.optimizer)
     
     def start(self, config):
+        """ Starts model training
+        
+        Arguments:
+            config {Object} -- configurations of the model
+        """
         if self.config.dataset == 'UCFCC50':
             save_folder_name = str(config.model) + ' ' + config.dataset + '_fold' + str(self.config.cc50_val) + ' ' + str(date.today().strftime("%d-%m-%Y") + ' ' + str(time.strftime("%H_%M_%S", time.localtime())))
         else:
@@ -159,7 +183,16 @@ class CANSolver(object):
             
     
     def train(self, model, criterion, optimizer, epoch, f, config):
-
+        """ Performs model training
+        
+        Arguments:
+            model {Object} -- model to be used
+            criterion {Object} -- criterion to be used
+            optimizer {Object} -- optimizer to be used
+            epoch {int} -- starting epoch
+            f {File} -- file where the training details are saved
+            config {Object} -- configurations used for training
+        """
         losses = AverageMeter()
         batch_time = AverageMeter()
         data_time = AverageMeter()
@@ -240,6 +273,17 @@ class CANSolver(object):
         f.close()        
     
     def validate(self, model, criterion, config):
+        """ Performs model validation
+        
+        Arguments:
+            model {Object} -- model to be evaluated
+            criterion {Object} -- criterion to be used
+            config {Object} -- configurations used for model validation
+        
+        Returns:
+            double -- resulting MAE of the model evaluation
+            double -- resulting RMSE of the model evaluation
+        """
         test_loader = torch.utils.data.DataLoader(
         CANDataset.listDataset(config, self.data,
                     shuffle=False,
@@ -285,6 +329,8 @@ class CANSolver(object):
         return mae, rmse
     
     def test(self):
+        """ Performs model testing
+        """
         self.tests_save_path = os.path.join('./tests', self.config.weights.split("/")[1])
         try:
             print("Creating test save path directory...")

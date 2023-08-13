@@ -5,6 +5,15 @@ from torchvision import models
 
 class ContextualModule(nn.Module):
     def __init__(self, features, out_features=512, sizes=(1, 2, 3, 6)):
+        """ Initializes a ContextualModule object
+    
+        Arguments:
+            features {list} -- input features of the model
+
+        Keyword Arguments:
+            out_features {int} -- number of output features {default: 512}
+            sizes {tuple} -- sizes to rescale the features {default: (1, 2, 3, 6)}
+        """
         super(ContextualModule, self).__init__()
         self.scales = []
         self.scales = nn.ModuleList([self._make_scale(features, size) for size in sizes])
@@ -12,16 +21,43 @@ class ContextualModule(nn.Module):
         self.relu = nn.ReLU()
         self.weight_net = nn.Conv2d(features,features,kernel_size=1)
 
+        
     def __make_weight(self,feature,scale_feature):
+        """ Creates weights for the contextual module
+        
+        Arguments:
+            feature {list} -- input feature of the model
+            scale_feature {list} -- scaled feature
+        
+        Returns:
+            double -- result of the sigmoid function on the weight of the feature
+        """
         weight_feature = feature - scale_feature
         return F.sigmoid(self.weight_net(weight_feature))
 
     def _make_scale(self, features, size):
+        """ Creates scaled features
+        
+        Arguments:
+            features {list} -- input features of the model
+            size {int} -- size to rescale the model
+        
+        Returns:
+            nn.Sequential -- Sequential container storing the prior and convolutional layers
+        """
         prior = nn.AdaptiveAvgPool2d(output_size=(size, size))
         conv = nn.Conv2d(features, features, kernel_size=1, bias=False)
         return nn.Sequential(prior, conv)
 
     def forward(self, feats):
+        """ Implements the forward pass of the contextual module
+        
+        Arguments:
+            feats {list} -- input features of the model
+        
+        Returns:
+            double -- result of the ReLU activation function on the model
+        """
         h, w = feats.size(2), feats.size(3)
         multi_scales = [F.upsample(input=stage(feats), size=(h, w), mode='bilinear') for stage in self.scales]
         weights = [self.__make_weight(feats,scale_feature) for scale_feature in multi_scales]
@@ -31,6 +67,11 @@ class ContextualModule(nn.Module):
 
 class CANNet(nn.Module):
     def __init__(self, load_weights=False):
+        """ Initializes a CANNet object
+        
+        Keyword Arguments:
+            load_weights {boolean} -- whether pretrained weights will be loaded {default: False}
+        """
         super(CANNet, self).__init__()
         self.seen = 0
         self.context = ContextualModule(512, 512)
@@ -47,6 +88,14 @@ class CANNet(nn.Module):
                 list(self.frontend.state_dict().items())[i][1].data[:] = list(mod.state_dict().items())[i][1].data[:]
 
     def forward(self,x):
+        """ Implements the forward pass of the model
+        
+        Arguments:
+            x {list} -- input features of the model
+        
+        Returns:
+            list -- updated features of the model
+        """
         x = self.frontend(x)
         x = self.context(x)
         x = self.backend(x)
@@ -54,6 +103,8 @@ class CANNet(nn.Module):
         return x
 
     def _initialize_weights(self):
+        """ Initializes the weights of the model
+        """
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.normal_(m.weight, std=0.01)
@@ -64,6 +115,19 @@ class CANNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
+    """ Creates the layers of the model
+    
+    Arguments:
+        cfg {list} -- number of channels per layer of the model
+
+    Keyword Arguments:
+        in_channels {int} -- number of input channels {default: 3}
+        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
+        dilation {boolean} -- whether dilation is to be implemented {default: False}
+
+    Returns:
+        nn.Sequential -- Sequential container storing the layers of the model
+    """
     if dilation:
         d_rate = 2
     else:

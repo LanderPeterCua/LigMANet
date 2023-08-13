@@ -12,6 +12,20 @@ import glob
 class listDataset(Dataset):
     def __init__(self, config, root, shape=None, transform=None,  train=False, seen=0,
                  batch_size=1, num_workers=20):
+        """ Initializes a listDataset object
+        
+        Arguments:
+            config {Object} -- configurations of the model
+            root {string} -- path to root directory of the dataset images
+        
+        Keyword Arguments:
+            shape {list} -- shape of the dataset {default: None}
+            transform {Object} -- transform operation perfoemd on the dataset images {default: None}
+            train {boolean} -- whether the data will be used for model training {default: False}
+            seen {int} -- number of input images seen {default: 0}
+            batch_size {int} -- number of samples processed per batch {default: 1}
+            num_workers {int} -- number of subprocesses used for data loading {default: 20}
+        """
         # if train and dataset == 'shanghai':
         #     root = root*4
         # random.shuffle(root)
@@ -46,9 +60,23 @@ class listDataset(Dataset):
             self.nSamples = len(self.lines)
 
     def __len__(self):
+        """ Gets the length of the dataset
+        
+        Returns:
+            int -- number of images in the dataset
+        """
         return self.nSamples
 
     def __getitem__(self, index):
+        """ Retrieves the item at the specified index
+        
+        Arguments:
+            index {int} -- index of item to be retrieved
+        
+        Returns:
+            Image -- image at the specified index
+            np.array -- ground truth density map of the image
+        """
         assert index <= len(self), 'index range error' 
         
         img_path = self.lines[index]
@@ -60,9 +88,18 @@ class listDataset(Dataset):
         return img, target
     
 def load_data(img_path,train=True, dataset='Shanghaitech-A'):
-    """ Load data
-
-    Use crop_ratio between 0.5 and 1.0 for random crop
+    """ Loads the image data
+        
+        Arguments:
+            img_path {string} -- path to the dataset images
+        
+        Keyword Arguments:
+            train {boolean} -- whether the dataset is used for training {default: True}
+            dataset {string} -- name of dataset to be used {default: 'Shanghaitech-A'}
+        
+        Returns:
+            Image -- retrieved image
+            np.array -- ground truth density map of the image
     """
     gt_path = img_path.replace('.jpg', '.h5').replace('images', 'density_maps')
     img = Image.open(img_path).convert('RGB')
@@ -78,6 +115,7 @@ def load_data(img_path,train=True, dataset='Shanghaitech-A'):
         #     img = img.crop((dx,dy,crop_size[0]+dx,crop_size[1]+dy))
         #     target = target[dy:crop_size[1]+dy,dx:crop_size[0]+dx]
 
+        # Use crop_ratio between 0.5 and 1.0 for random crop
         ratio = 0.5
         crop_size = (int(img.size[0]*ratio),int(img.size[1]*ratio))
         rdn_value = random.random()
@@ -110,8 +148,16 @@ def load_data(img_path,train=True, dataset='Shanghaitech-A'):
     return img, target
 
 def reshape_target(target, down_sample=3):
-    """ Down sample GT to 1/8
-
+    """ Downsamples the ground truth to 1/8 of its original size
+    
+    Arguments:
+        target {np.array} -- ground truth density map to be downsampled
+    
+    Keyword Arguments:
+        down_sample {int} -- ratio to downsample the ground truth density map
+    
+    Returns:
+        np.array -- downsampled ground truth density map
     """
     height = target.shape[0]
     width = target.shape[1]

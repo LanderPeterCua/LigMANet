@@ -4,11 +4,26 @@ from math import ceil
 
 class Bay_Loss(Module):
     def __init__(self, use_background, device):
+        """ Initializes a Bay_Loss object
+        
+        use_background {boolean} -- whether the image background will be considered
+        device {string} -- device to be used for the computation of Bayesian Loss
+        """
         super(Bay_Loss, self).__init__()
         self.device = device
         self.use_bg = use_background
 
     def forward(self, prob_list, target_list, pre_density):
+        """ Implements the forward pass
+        
+        Arguments:
+            prob_list {list} -- list of input images
+            target_list {list} -- list of ground truth density maps
+            pre_density {list} -- list of generated density maps
+        
+        Returns:
+            double -- loss value of the forward pass
+        """ 
         loss = 0
         for idx, prob in enumerate(prob_list):  # iterative through each sample
             if prob is None:  # image contains no annotation points
@@ -33,6 +48,16 @@ class Bay_Loss(Module):
     
 class Post_Prob(Module):
     def __init__(self, sigma, c_size, stride, background_ratio, use_background, device):
+        """ Initializes a Post_Prob object
+        
+        Arguments:
+            sigma {double} -- sigma value of the object
+            c_size {int} -- crop size of the images
+            stride {int} -- stride of the convolutional layer
+            background_ratio {double} -- ratio of the image backgrounds
+            use_background {boolean} -- whether the image background will be considered
+            device {string} -- device to be used
+        """
         super(Post_Prob, self).__init__()
         assert c_size % stride == 0
 
@@ -47,11 +72,19 @@ class Post_Prob(Module):
         self.use_bg = use_background
 
     def forward(self, points, st_sizes):
+        """ Implements the forward pass
+        
+        Arguments:
+            points {list} -- list of points in the input image density maps
+            st_sizes {list} -- minimum dimension size of each of the input images
+            
+        Returns:
+            list -- list of generated density maps
+        """
         num_points_per_image = [len(points_per_image) for points_per_image in points]
         all_points = torch.cat(points, dim=0)
 
         if len(all_points) > 0:
-            #print(all_points)
             x = all_points[:, 0].unsqueeze_(1)
             y = all_points[:, 1].unsqueeze_(1)
             x_dis = -2 * torch.matmul(x, self.cood) + x * x + self.cood * self.cood

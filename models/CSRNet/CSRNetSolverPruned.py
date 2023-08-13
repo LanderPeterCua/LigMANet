@@ -22,16 +22,27 @@ from utilities.pruner import VanillaPruner
 from models.CSRNet.CSRNetUtils import save_checkpoint
 
 class AverageMeter(object):
-        """Computes and stores the average and current value"""
+        """ Initializes an AverageMeter object
+        """
         def __init__(self):
             self.reset()
 
+        """ Resets the values of the AverageMeter object
+        """
         def reset(self):
             self.val = 0
             self.avg = 0
             self.sum = 0
             self.count = 0
 
+        """ Updates the values of the AverageMeter object
+        
+        Arguments:
+            val {int} -- value of val
+        
+        Keyword Arguments:
+            n {int} -- value of n {default: 1}
+        """
         def update(self, val, n=1):
             self.val = val
             self.sum += val * n
@@ -45,9 +56,9 @@ class CSRNetSolverPruned(object):
         Initializes a CSRNet Solver object
 
         Arguments:
-            
+            config {Object} -- configurations of the model
+            paths {Object} -- paths to the resources used by the model  
         """
-
         self.config = config
         self.paths = paths
         self.original_lr = self.config.lr
@@ -68,7 +79,6 @@ class CSRNetSolverPruned(object):
             model {Object} -- the model to be used
             name {str} -- name of the model
         """
-
         num_params = 0
         for name, param in model.named_parameters():
             if 'transform' in name:
@@ -78,10 +88,8 @@ class CSRNetSolverPruned(object):
         print('The number of parameters: ', num_params)
 
     def build_model(self):
+        """ Instantiates the model, loss criterion, and optimizer
         """
-        Instantiates the model, loss criterion, and optimizer
-        """
-        
         self.model = CSRNetPruned().cuda()
         self.criterion = nn.L1Loss(size_average=False).cuda()
         self.optimizer = optim.SGD(params=self.model.parameters(), lr=self.config.lr, momentum=self.config.momentum, weight_decay=self.config.weight_decay)
@@ -178,6 +186,16 @@ class CSRNetSolverPruned(object):
             f.close()
 
     def train(self, model, criterion, optimizer, epoch, config, pruner):
+        """ Performs model training
+        
+        Arguments:
+            model {Object} -- model to be used
+            criterion {Object} -- criterion to be used
+            optimizer {Object} -- optimizer to be used
+            epoch {int} -- starting epoch
+            config {Object} -- configurations used for training
+            pruner {Object} -- tool for performing pruning
+        """
         losses = AverageMeter()
         batch_time = AverageMeter()
         data_time = AverageMeter()
@@ -258,6 +276,13 @@ class CSRNetSolverPruned(object):
         f.close()    
 
     def validate(self, model, criterion, config):
+        """ Performs model validation
+        
+        Arguments:
+            model {Object} -- model to be evaluated
+            criterion {Object} -- criterion to be used
+            config {Object} -- configurations used for model validation
+        """
         print ('begin test')
         test_loader = torch.utils.data.DataLoader(
         CSRNetDataset(config, self.data,
@@ -293,8 +318,12 @@ class CSRNetSolverPruned(object):
         return mae, rmse    
 
     def adjust_learning_rate(self, optimizer, epoch):
-        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+        """ Sets the learning rate of the model 
         
+        Arguments:
+            optimizer {Object} -- optimizer used by the model
+            epoch {int} -- current epoch number of the model
+        """
         self.config.lr = self.original_lr
         
         for i in range(len(self.steps)):

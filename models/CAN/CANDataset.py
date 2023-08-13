@@ -11,6 +11,21 @@ import glob
 
 class listDataset(Dataset):
     def __init__(self, config, root, shape=None, shuffle=True, transform=None,  train=False, seen=0, batch_size=1, num_workers=4):
+        """ Initializes a listDataset object
+        
+        Arguments:
+            config {Object} -- configurations of the model
+            root {string} -- path to root directory of the dataset images
+        
+        Keyword Arguments:
+            shape {list} -- shape of the dataset {default: None}
+            shuffle {bool} -- whether the dataset will be shuffled {default: True}
+            transform {Object} -- transform operation perfoemd on the dataset images {default: None}
+            train {boolean} -- whether the data will be used for model training {default: False}
+            seen {int} -- number of input images seen {default: 0}
+            batch_size {int} -- number of samples processed per batch {default: 1}
+            num_workers {int} -- number of subprocesses used for data loading {default: 4}
+        """
         # random.shuffle(root)
         # self.nSamples = len(root)
 
@@ -43,9 +58,23 @@ class listDataset(Dataset):
         
         
     def __len__(self):
+        """ Gets the length of the dataset
+        
+        Returns:
+            int -- number of images in the dataset
+        """
         return self.nSamples
 
     def __getitem__(self, index):
+        """ Retrieves the item at the specified index
+        
+        Arguments:
+            index {int} -- index of item to be retrieved
+        
+        Returns:
+            Image -- image at the specified index
+            np.array -- ground truth density map of the image
+        """
         assert index <= len(self), 'index range error'
         
         img_path = self.lines[index]
@@ -57,6 +86,18 @@ class listDataset(Dataset):
         return img,target
 
     def load_data(self, img_path,train = True):
+        """ Loads the image data
+        
+        Arguments:
+            img_path {string} -- path to the dataset images
+        
+        Keyword Arguments:
+            train {boolean} -- whether the dataset is used for training {default: True}
+        
+        Returns:
+            Image -- retrieved image
+            np.array -- ground truth density map of the image
+        """
         gt_path = img_path.replace('.jpg','.h5').replace('images','density_maps')
         img = Image.open(img_path).convert('RGB')
         gt_file = h5py.File(gt_path,'r')

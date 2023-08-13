@@ -6,15 +6,19 @@ from collections.abc import Iterable
 
 
 def prune_vanilla_elementwise(param, sparsity, fn_importance=lambda x: xs.abs()):
-    """
-    element-wise vanilla pruning
-    :param param: torch.(cuda.)Tensor, weight of conv/fc layer
-    :param sparsity: float, pruning sparsity
-    :param fn_importance: function, inputs 'param' and returns the importance of
+    """ Element-wise vanilla pruning
+    
+    Arguments:
+        param {torch.Tensor} -- weight of conv/fc layer
+        sparsity {float} -- pruning sparsity
+    
+    Keyword Arguments:
+        fn_importance {function} -- inputs 'param' and returns the importance of
                                     each position in 'param',
-                                    default=lambda x: x.abs()
-    :return:
-        torch.(cuda.)ByteTensor, mask for zeros
+                                    {default: lambda x: x.abs()}
+    
+    Returns:
+        torch.ByteTensor -- mask for zeros
     """
     sparsity = min(max(0.0, sparsity), 1.0)
     if sparsity == 1.0:
@@ -38,15 +42,19 @@ def prune_vanilla_elementwise(param, sparsity, fn_importance=lambda x: xs.abs())
 
 
 def prune_vanilla_kernelwise(param, sparsity, fn_importance=lambda x: x.norm(1, -1)):
-    """
-    kernel-wise vanilla pruning, the importance determined by L1 norm
-    :param param: torch.(cuda.)Tensor, weight of conv/fc layer
-    :param sparsity: float, pruning sparsity
-    :param fn_importance: function, inputs 'param' as size (param.size(0) * param.size(1), -1) and
-                                    returns the importance of each kernel in 'param',
-                                    default=lambda x: x.norm(1, -1)
-    :return:
-        torch.(cuda.)ByteTensor, mask for zeros
+    """ Kernel-wise vanilla pruning, the importance determined by L1 norm
+    
+    Arguments:
+        param {torch.Tensor} -- weight of conv/fc layer
+        sparsity {float} -- pruning sparsity
+        
+    Keyword Arguments:
+        fn_importance {function} -- inputs 'param' as size (param.size(0) * param.size(1), -1) and
+                                    returns the importance of each kernel in 'param'
+                                    {default: lambda x: x.norm(1, -1)}
+    
+    Returns:
+        torch.ByteTensor -- mask for zeros
     """
     assert param.dim() >= 3
     sparsity = min(max(0.0, sparsity), 1.0)
@@ -66,15 +74,19 @@ def prune_vanilla_kernelwise(param, sparsity, fn_importance=lambda x: x.norm(1, 
 
 
 def prune_vanilla_filterwise(sparsity, param, fn_importance=lambda x: x.norm(1, -1)):
-    """
-    filter-wise vanilla pruning, the importance determined by L1 norm
-    :param param: torch.(cuda.)Tensor, weight of conv/fc layer
-    :param sparsity: float, pruning sparsity
-    :param fn_importance: function, inputs 'param' as size (param.size(0), -1) and
+    """ Filter-wise vanilla pruning, the importance determined by L1 norm
+    
+    Arguments:
+        param {torch.Tensor} -- weight of conv/fc layer
+        sparsity {float} -- pruning sparsity
+        
+    Keyword Arguments:
+        fn_importance {function} -- inputs 'param' as size (param.size(0), -1) and
                                 returns the importance of each filter in 'param',
-                                default=lambda x: x.norm(1, -1)
-    :return:
-        torch.(cuda.)ByteTensor, mask for zeros
+                                {default: lambda x: x.norm(1, -1)}
+    
+    Returns:
+        torch.ByteTensor -- mask for zeros
     """
     assert param.dim() >= 3
     sparsity = min(max(0.0, sparsity), 1.0)
@@ -96,15 +108,10 @@ def prune_vanilla_filterwise(sparsity, param, fn_importance=lambda x: x.norm(1, 
 class VanillaPruner(object):
 
     def __init__(self, rule=None):
-        """
-        Pruner Class for Vanilla Pruning Method
-        :param rule: str, path to the rule file, each line formats
-                          'param_name granularity sparsity_stage_0, sparstiy_stage_1, ...'
-                     list of tuple, [(param_name(str), granularity(str),
-                                      sparsity(float) or [sparsity_stage_0(float), sparstiy_stage_1,],
-                                      fn_importance(optional, str or function))]
-                     'granularity': str, choose from ['element', 'kernel', 'filter']
-                     'fn_importance': str, choose from ['abs', 'l1norm', 'l2norm']
+        """ Initializes a VanillaPruner object
+        
+        Keyword Arguments: 
+            rule {str} -- path to the rule file {default: None}
         """
         if rule:
             if isinstance(rule, str):
@@ -141,11 +148,16 @@ class VanillaPruner(object):
         # print("=" * 89)
 
     def load_state_dict(self, state_dict, replace_rule=True):
-        """
-        Recover Pruner
-        :param state_dict: dict, a dictionary containing a whole state of the Pruner
-        :param replace_rule: bool, whether to use rule settings in 'state_dict'
-        :return: VanillaPruner
+        """ Recovers pruner
+        
+        Arguments:
+            state_dict {dict} -- a dictionary containing a whole state of the Pruner
+            
+        Keyword Arguments:
+            replace_rule {bool} -- whether to use rule settings in 'state_dict'
+            
+        Returns:
+            VanillaPruner
         """
         if replace_rule:
             self.rule = state_dict['rule']
@@ -167,9 +179,10 @@ class VanillaPruner(object):
         print("=" * 89)
 
     def state_dict(self):
-        """
-        Returns a dictionary containing a whole state of the Pruner
-        :return: dict, a dictionary containing a whole state of the Pruner
+        """ Returns a dictionary containing a whole state of the Pruner
+        
+        Returns:
+            dict - a dictionary containing a whole state of the Pruner
         """
         state_dict = dict()
         state_dict['rule'] = [r[:-1] for r in self.rule]
@@ -177,14 +190,18 @@ class VanillaPruner(object):
         return state_dict
 
     def prune_param(self, param, param_name, stage=0, verbose=False):
-        """
-        prune parameter
-        :param param: torch.(cuda.)tensor
-        :param param_name: str, name of param
-        :param stage: int, the pruning stage, default=0
-        :param verbose: bool, whether to print the pruning details
-        :return:
-            torch.(cuda.)ByteTensor, mask for zeros
+        """ Prune parameters
+        
+        Arguments:
+            param {torch.Tensor} -- parameter to be pruned
+            param_name {str} -- name of param
+        
+        Keyword Arguments:
+            stage {int} -- the pruning stage {default: 0}
+            verbose {bool} -- whether to print the pruning details
+        
+        Returns:
+            torch.ByteTensor -- mask for zeros
         """
         rule_id = -1
         for idx, r in enumerate(self.rule):
@@ -216,14 +233,15 @@ class VanillaPruner(object):
             return None
 
     def prune(self, model, stage=0, update_masks=False, verbose=False):
-        """
-        prune models
-        :param model: torch.nn.Module
-        :param stage: int, the pruning stage, default=0
-        :param update_masks: bool, whether update masks
-        :param verbose: bool, whether to print the pruning details
-        :return:
-            void
+        """ Prunes models
+        
+        Arguments:
+            model {torch.nn.Module} -- model to be pruned
+            
+        Keyword Arguments:
+            stage {int} -- the pruning stage {default: 0}
+            update_masks {bool} -- whether to update masks {default: False}
+            verbose {bool} -- whether to print the pruning details {default: False}
         """
         update_masks = True if update_masks or len(self.masks) == 0 else False
         if verbose:

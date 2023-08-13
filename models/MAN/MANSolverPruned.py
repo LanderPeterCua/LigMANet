@@ -19,6 +19,8 @@ from models.MAN.MANLoss import Bay_Loss
 from models.MAN.MANLoss import Post_Prob
 from math import ceil
 import timm
+from matplotlib import pyplot as plt
+import cv2
 
 import torch.nn.utils.prune as prune
 
@@ -32,6 +34,17 @@ __all__ = ['vgg19_trans']
 model_urls = {'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'}
 
 def train_collate(batch):
+    """ Collates the relevant details of the batch of input images for model training
+    
+    Arguments:
+        batch {list} -- batch of input images
+        
+    Returns:
+        torch.Tensor -- tensor representation of the list of input images
+        list -- list of tensor representations of the ground truth density maps
+        list -- list of tensor representations of the generated density maps
+        torch.FloatTensor -- tensor representation of the list of minimum dimensions of the input images
+    """
     transposed_batch = list(zip(*batch))
     images = torch.stack(transposed_batch[0], 0)
     points = transposed_batch[1]  # the number of points is not fixed, keep it as a list of tensor
@@ -40,6 +53,17 @@ def train_collate(batch):
     return images, points, targets, st_sizes
 
 def make_layers(cfg, batch_norm=False):
+    """ Creates the layers of the model
+    
+    Arguments:
+        cfg {list} -- number of channels per layer of the model
+
+    Keyword Arguments:
+        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
+
+    Returns:
+        nn.Sequential -- Sequential container storing the layers of the model
+    """
     layers = []
     in_channels = 3
     for v in cfg:
@@ -53,22 +77,11 @@ def make_layers(cfg, batch_norm=False):
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
     return nn.Sequential(*layers)
-
-def init_MAN():
-    """VGG 19-layer model (configuration "E")
-        model pre-trained on ImageNet
-    """
-
-    if (BACKBONE_MODEL == "efficientnet"):
-        model = MAN(timm.create_model('tf_efficientnet_b0', pretrained=True))
-    else:
-        model = MAN(make_layers(cfg['E']))
-        model.load_state_dict(model_zoo.load_url(model_urls['vgg19']), strict=False)
-    return model
     
 class MANSolverPruned(Trainer):
     def setup(self):
-        """initial the datasets, model, loss and optimizer"""
+        """Initializes the datasets, model, loss, and optimizer and performs pruning
+        """
         args = self.args
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
@@ -90,7 +103,7 @@ class MANSolverPruned(Trainer):
         self.datasets = {x: Crowd(os.path.join(args.data_dir, x),
                                   args.crop_size,
                                   args.downsample_ratio,
-                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, x) for x in ['train', 'test']}
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, args.augment_save_location, args.augment_save, x) for x in ['train', 'test']}
             
         self.dataloaders = {x: DataLoader(self.datasets[x],
                                           collate_fn=(train_collate
@@ -103,7 +116,7 @@ class MANSolverPruned(Trainer):
                             for x in ['train', 'test']}
         self.model = init_MAN()
         self.model.to(self.device)
-
+        
         if (BACKBONE_MODEL == 'efficientnet'):
             self.optimizer = optim.RMSprop(self.model.parameters(), lr = args.lr, weight_decay = args.weight_decay, momentum = 0.9)
         else:
@@ -130,12 +143,12 @@ class MANSolverPruned(Trainer):
         for name, module in self.model.named_modules():
             # prune 20% of connections in all 2D-conv layers
             if isinstance(module, torch.nn.Conv2d):
-                prune.l1_unstructured(module, name='weight', amount=0.4)
+                prune.l1_unstructured(module, name='weight', amount=0.6)
                 print(name, prune.is_pruned(module))
                 prune.remove(module, name="weight")
             # prune 40% of connections in all linear layers
             elif isinstance(module, torch.nn.Linear):
-                prune.l1_unstructured(module, name='weight', amount=0.4)
+                prune.l1_unstructured(module, name='weight', amount=0.6)
                 print(name, prune.is_pruned(module))
                 prune.remove(module, name="weight")
 
@@ -155,16 +168,29 @@ class MANSolverPruned(Trainer):
         self.best_mse = np.inf
         self.save_all = args.save_all
         self.best_count = 0
+        
+    def init_MAN(self):
+        """ Initializes the MAN model with the appropriate backbone network
+    
+        Returns:
+            Object -- initialized model
+        """
+        # For EfficientNet backbones, download the corresponding model from the Hugging Face repository
+        if (BACKBONE_MODEL == "efficientnet"):
+            model = MAN(timm.create_model('tf_efficientnet_b0', pretrained=True))
+        # For the VGG-19 backbone, use the VGG 19-layer model (configuration "E") pre-trained on ImageNet
+        else:
+            model = MAN(make_layers(cfg['E']))
+            model.load_state_dict(model_zoo.load_url(model_urls['vgg19']), strict=False)
+        return model
 
     def print_num_params(self, model, name):
-        """
-        Prints the structure of the network and the total number of parameters
+        """ Prints the structure of the network and the total number of parameters
 
         Arguments:
             model {Object} -- the model to be used
-            name {str} -- name of the model
+            name {string} -- name of the model
         """
-
         num_params = 0
         for name, param in model.named_parameters():
             if 'transform' in name:
@@ -174,7 +200,8 @@ class MANSolverPruned(Trainer):
         print('The number of parameters: ', num_params)
 
     def train(self):
-        """training process"""
+        """ Performs model training
+        """
         args = self.args
         
         #ADDED VARIABLE INITIALIZATION FOR WARMUP LEARNING
@@ -189,21 +216,13 @@ class MANSolverPruned(Trainer):
                 self.val_epoch()
 
     def train_epoch(self):
+        """ Performs a single epoch of model training
+        """
         epoch_loss = AverageMeter()
         epoch_mae = AverageMeter()
         epoch_mse = AverageMeter()
         epoch_start = time.time()
         self.model.train()  # Set model to training mode
-        
-        #ADDED CODE FOR WARMUP LEARNING   
-                
-        # num_sched = len(self.learning_sched)
-        # if num_sched != 0 and self.sched < num_sched:
-        #     if (self.epoch + 1) in self.learning_sched:
-        #         self.lr *= 10
-        #         print("Learning rate increased to ", self.lr)
-        #         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        #         self.sched += 1
                         
         # Iterate over data.
         for step, (inputs, points, targets, st_sizes) in enumerate(self.dataloaders['train']):
@@ -251,25 +270,10 @@ class MANSolverPruned(Trainer):
             'model_state_dict': model_state_dic
         }, save_path)
         self.save_list.append(save_path)  # control the number of saved models
-        
-        #####START HERE####
-        """
-        val_epoch_mse = np.sqrt(epoch_mse.get_avg())
-        val_epoch_mae = epoch_mae.get_avg()
-        
-        if (2.0 * val_epoch_mse + val_epoch_mae) < (2.0 * self.best_mse + self.best_mae):
-            self.best_mse = val_epoch_mse
-            self.best_mae = val_epoch_mae
-            logging.info("save best mse {:.2f} mae {:.2f} model epoch {}".format(self.best_mse,
-                                                                                 self.best_mae,
-                                                                                 self.epoch))
-            if self.save_all:
-                torch.save(model_state_dic, os.path.join(self.save_dir, 'best_model_{}.pth'.format(self.epoch)))
-                self.best_count += 1
-            else:
-                torch.save(model_state_dic, os.path.join(self.save_dir, 'best_model.pth'))
-        """
+
     def val_epoch(self):
+        """ Performs model validation
+        """
         epoch_start = time.time()
         # self.model.eval()  # Set model to evaluate mode
         epoch_res = []
@@ -335,23 +339,27 @@ class MANSolverPruned(Trainer):
                 torch.save(model_state_dic, os.path.join(self.save_dir, 'best_model.pth'))
                 
     def test(self, args):
+        """ Performs model testing
+        
+        Arguments:
+            args {Object} -- arguments used by the model
+        """
         args = args
 
         datasets = Crowd(os.path.join(args.data_dir, 'test'),
                                   args.crop_size,
                                   args.downsample_ratio,
-                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, method='test')
+                                  args.dataset_name, args.cc_50_val, args.cc_50_test, args.is_gray, args.augment_contrast, args.augment_contrast_factor, args.augment_save_location, args.augment_save, method='test')
 
         dataloader = torch.utils.data.DataLoader(datasets, 1, shuffle=False,
                                                  num_workers=8, pin_memory=False)
 
         device = torch.device('cuda')
-        model = init_MAN()
+        model = self.init_MAN()
         model.to(device)
         model.eval()
 
         model.load_state_dict(torch.load(args.best_model_path, device))
-        print("HERE")
         epoch_minus = []
         start_time = time.time()
         for inputs, count, name in dataloader:

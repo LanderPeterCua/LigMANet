@@ -26,17 +26,28 @@ from matplotlib import pyplot as plt
 import xlsxwriter
 
 class AverageMeter(object):
-    """Computes and stores the average and current value"""
     def __init__(self):
+        """ Initializes an AverageMeter object
+        """
         self.reset()
 
     def reset(self):
+        """ Resets the values of the AverageMeter object
+        """
         self.val = 0
         self.avg = 0
         self.sum = 0
         self.count = 0
 
     def update(self, val, n=1):
+        """ Updates the values of the AverageMeter object
+        
+        Arguments:
+            val {int} -- value of val
+
+        Keyword Arguments:
+            n {int} -- value of n {default: 1}
+        """
         self.val = val
         self.sum += val * n
         self.count += n
@@ -44,8 +55,14 @@ class AverageMeter(object):
 
 
 class CANSolverPruned(object):
-
     def __init__(self, config, paths):
+        """
+        Initializes a CAN Solver object
+
+        Arguments:
+            config {Object} -- configurations of the model
+            paths {Object} -- paths to the resources used by the model  
+        """
         self.config = config
         self.paths = paths
         self.lr = self.config.lr
@@ -57,14 +74,12 @@ class CANSolverPruned(object):
         self.build_model()
 
     def print_num_params(self, model, name):
-        """
-        Prints the structure of the network and the total number of parameters
+        """ Prints the structure of the network and the total number of parameters
 
         Arguments:
             model {Object} -- the model to be used
-            name {str} -- name of the model
+            name {string} -- name of the model
         """
-
         num_params = 0
         for name, param in model.named_parameters():
             if 'transform' in name:
@@ -74,6 +89,8 @@ class CANSolverPruned(object):
         print('The number of parameters: ', num_params)
 
     def build_model(self):
+        """ Instantiates the model, loss criterion, and optimizer
+        """
         self.model = CANNet()
         self.criterion = nn.MSELoss(size_average=False)
 #         self.criterion = nn.L1Loss()
@@ -103,7 +120,7 @@ class CANSolverPruned(object):
         print(self.optimizer)
         print("Initial Parameters")
         self.print_num_params(self.model, self.config.model) 
-
+        '''
         # Prune
         for name, module in self.model.named_modules():
             # prune 20% of connections in all 2D-conv layers
@@ -116,11 +133,16 @@ class CANSolverPruned(object):
                 prune.l1_unstructured(module, name='weight', amount=0.4)
                 print(name, prune.is_pruned(module))
                 prune.remove(module, name="weight")
-
+        '''
         print("Updated Parameters")
         self.print_num_params(self.model, self.config.model) 
-    
+        
     def start(self, config):
+        """ Prunes the model and starts model training
+        
+        Arguments:
+            config {Object} -- configurations of the model
+        """
         if self.config.dataset == 'UCFCC50':
             save_folder_name = str(config.model) + ' ' + config.dataset + '_fold' + str(self.config.cc50_val) + ' ' + str(date.today().strftime("%d-%m-%Y") + ' ' + str(time.strftime("%H_%M_%S", time.localtime())))
         else:
@@ -146,7 +168,24 @@ class CANSolverPruned(object):
             self.sched = 0
             
             for e in range(self.start_epoch, self.config.num_epochs):
+                
+                if e == self.config.num_epochs / 2:
+                    # Prune
+                    for name, module in self.model.named_modules():
+                        # prune 20% of connections in all 2D-conv layers
+                        if isinstance(module, torch.nn.Conv2d):
+                            prune.l1_unstructured(module, name='weight', amount=0.4)
+                            print(name, prune.is_pruned(module))
+                            prune.remove(module, name="weight")
+                        # prune 40% of connections in all linear layers
+                        elif isinstance(module, torch.nn.Linear):
+                            prune.l1_unstructured(module, name='weight', amount=0.4)
+                            print(name, prune.is_pruned(module))
+                            prune.remove(module, name="weight")
 
+                    print("Updated Parameters")
+                    self.print_num_params(self.model, self.config.model) 
+        
                 self.train(self.model, self.criterion, self.optimizer, e, f, self.config)
                 prec1, rmse = self.validate(self.model, self.criterion, self.config)
 
@@ -198,7 +237,16 @@ class CANSolverPruned(object):
             
     
     def train(self, model, criterion, optimizer, epoch, f, config):
-
+        """ Performs model training
+        
+        Arguments:
+            model {Object} -- model to be used
+            criterion {Object} -- criterion to be used
+            optimizer {Object} -- optimizer to be used
+            epoch {int} -- starting epoch
+            f {File} -- file where the training details are saved
+            config {Object} -- configurations used for training
+        """
         losses = AverageMeter()
         batch_time = AverageMeter()
         data_time = AverageMeter()
@@ -279,6 +327,17 @@ class CANSolverPruned(object):
         f.close()        
     
     def validate(self, model, criterion, config):
+        """ Performs model validation
+        
+        Arguments:
+            model {Object} -- model to be evaluated
+            criterion {Object} -- criterion to be used
+            config {Object} -- configurations used for model validation
+        
+        Returns:
+            double -- resulting MAE of the model evaluation
+            double -- resulting RMSE of the model evaluation
+        """
         test_loader = torch.utils.data.DataLoader(
         CANDataset.listDataset(config, self.data,
                     shuffle=False,
@@ -324,6 +383,8 @@ class CANSolverPruned(object):
         return mae, rmse
     
     def test(self):
+        """ Performs model testing
+        """
         self.tests_save_path = os.path.join('./tests', self.config.weights.split("/")[1])
         try:
             print("Creating test save path directory...")

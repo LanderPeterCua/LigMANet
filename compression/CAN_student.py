@@ -5,6 +5,15 @@ from torchvision import models
 
 class ContextualModule(nn.Module):
     def __init__(self, features, out_features=512, sizes=(1, 2, 3, 6)):
+        """ Initializes a ContextualModule object
+        
+        Arguments:
+            features {list} -- feature values of the module
+
+        Keyword Arguments:
+            int -- final number of channels the features after passing through the bottleneck layer
+            list -- sizes used to scale the modules
+        """
         super(ContextualModule, self).__init__()
         self.scales = []
         self.scales = nn.ModuleList([self._make_scale(features, size) for size in sizes])
@@ -13,15 +22,41 @@ class ContextualModule(nn.Module):
         self.weight_net = nn.Conv2d(features,features,kernel_size=1)
 
     def __make_weight(self,feature,scale_feature):
+        """ Creates the model weights
+        
+        Arguments:
+            feature {list} -- original feature values of the model
+            scale_feature {list} -- scaled feature values of the model
+
+        Returns:
+            double -- result of the sigmoid function on the features
+        """
         weight_feature = feature - scale_feature
         return F.sigmoid(self.weight_net(weight_feature))
 
     def _make_scale(self, features, size):
+        """ Scales the pooling and convolutional layers of the model
+        
+        Arguments:
+            features {list} -- feature values of the model
+            size {int} -- target output size of the layer
+
+        Returns:
+            nn.Sequential -- Sequential container storing the prior and convolutional layers
+        """
         prior = nn.AdaptiveAvgPool2d(output_size=(size, size))
         conv = nn.Conv2d(features, features, kernel_size=1, bias=False)
         return nn.Sequential(prior, conv)
 
     def forward(self, feats):
+        """ Implements the forward pass of the model features
+        
+        Arguments:
+            feats {list} -- features of the model
+
+        Returns:
+            double -- result of the ReLU function on the bottleneck layer
+        """
         h, w = feats.size(2), feats.size(3)
         multi_scales = [F.upsample(input=stage(feats), size=(h, w), mode='bilinear') for stage in self.scales]
         weights = [self.__make_weight(feats,scale_feature) for scale_feature in multi_scales]
@@ -29,6 +64,7 @@ class ContextualModule(nn.Module):
         bottle = self.bottleneck(torch.cat(overall_features, 1))
         return self.relu(bottle)
 
+# Channel numbers for different channel preservation rates
 channel_nums = [[32, 64, 128, 256],  # half
                 [21, 43, 85, 171],  # third
                 [16, 32, 64, 128],  # quarter
@@ -40,6 +76,12 @@ channel_nums = [[32, 64, 128, 256],  # half
 
 class CANNet(nn.Module):
     def __init__(self, ratio=4, transform=True):
+        """ Initializes a CANNet object
+        
+        Keyword Arguments:
+            ratio {int} -- offset value for choosing the channel preservation rate
+            transform {bool} -- whether transform layers are to be added to the model
+        """
         super(CANNet, self).__init__()
         self.seen = 0
         self.transform = transform
@@ -106,6 +148,14 @@ class CANNet(nn.Module):
         self.features = []
 
     def forward(self,x):
+        """ Implements the forward pass of the entire model
+        
+        Arguments:
+            x {list} -- input features of the model
+
+        Returns:
+            list -- updated features of the model after one forward pass
+        """
         self.features = []
 
         # front-end
@@ -163,6 +213,8 @@ class CANNet(nn.Module):
         return x
 
     def _initialize_weights(self):
+        """ Initializes the weights of the model
+        """
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # nn.init.normal_(m.weight, std=0.01)
@@ -174,6 +226,15 @@ class CANNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 def context_transform(inp, oup):
+    """ Transforms the input features according to the context
+    
+    Arguments:
+        inp {int} -- number of input channels
+        oup {int} -- number of output channels
+
+    Returns:
+        nn.Sequential -- Sequential counter containing the list of rescaled features
+    """
     scales_0 = nn.Sequential(nn.AdaptiveAvgPool2d(output_size=(1, 1)), nn.Conv2d(inp, oup, kernel_size=1, bias=False))
     scales_1 = nn.Sequential(nn.AdaptiveAvgPool2d(output_size=(2, 2)), nn.Conv2d(inp, oup, kernel_size=1, bias=False))
     scales_2 = nn.Sequential(nn.AdaptiveAvgPool2d(output_size=(3, 3)), nn.Conv2d(inp, oup, kernel_size=1, bias=False))
@@ -184,6 +245,18 @@ def context_transform(inp, oup):
     return nn.Sequential(nn.ModuleList([scales_0, scales_1, scales_2, scales_3]), bottleneck, relu, weight_net)
     
 def contextual_forward(feats, scales, bottleneck, relu, weight_net):
+    """ Implements the forward pass for the contextual module
+    
+    Arguments:
+        feats {list} -- features of the model
+        scales {list} -- scales of the model
+        bottleneck {Object} -- bottleneck layer of the model
+        relu {Object} -- ReLU function to be used on the model
+        weight_net {Object} -- convolutional layer for creating the weights of the model
+
+    Returns:
+        double -- result of the ReLU function on the bottleneck layer
+    """
     h, w = feats.size(2), feats.size(3)
     multi_scales = [F.upsample(input=stage(feats), size=(h, w), mode='bilinear') for stage in scales]
     weights = [make_weight(feats,scale_feature,weight_net) for scale_feature in multi_scales]
@@ -192,10 +265,33 @@ def contextual_forward(feats, scales, bottleneck, relu, weight_net):
     return relu(bottle)
 
 def make_weight(feature,scale_feature,weight_net):
+    """ Creates weights based on the model features
+        
+    Arguments:
+        feature {list} -- feature of the model
+        scale_feature {list} -- scaled feature of the model
+        weight_net {Object} -- convolutional layer for creating the weights of the model
+
+    Returns:
+        double -- result of the sigmoid function on the weight_net layer
+    """
     weight_feature = feature - scale_feature
     return F.sigmoid(weight_net(weight_feature))
 
 def conv_layers(inp, oup, batch_norm=False, dilation=False):
+    """ Creates the convolutional layers of the model
+    
+    Arguments:
+        inp {int} -- number of input channels
+        oup {int} -- number of output channels
+
+    Keyword Arguments:
+        batch_norm {bool} -- True if batch normalization is to be used; False otherwise
+        dilation {bool} -- True if dilation is to be used; False otherwise
+
+    Returns:
+        nn.Sequential -- Sequential counter containing the convolutional layers
+    """
     if dilation:
         d_rate = 2
     else:
@@ -214,6 +310,18 @@ def conv_layers(inp, oup, batch_norm=False, dilation=False):
 
 
 def feature_transform(inp, oup, batch_norm=False):
+    """ Performs feature transformation on the model
+    
+    Arguments:
+        inp {int} -- number of input channels
+        oup {int} -- number of output channels
+
+    Keyword Arguments:
+        batch_norm {bool} -- whether batch normalization is to be used
+
+    Returns:
+        nn.Sequential -- Sequential container storing the updated layers
+    """
     conv2d = nn.Conv2d(inp, oup, kernel_size=1)  # no padding
     relu = nn.ReLU(inplace=True)
     layers = []
@@ -225,4 +333,12 @@ def feature_transform(inp, oup, batch_norm=False):
 
 
 def pool_layers(ceil_mode=True):
+    """ Performs pooling on the layers of the model
+        
+    Keyword Arguments:
+        ceil_mode {bool} -- True if ceil is used to calculate the output shape; False otherwise
+        
+    Returns:
+        nn.MaxPool2d -- pooling layer 
+    """
     return nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=ceil_mode)

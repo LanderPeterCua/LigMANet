@@ -7,6 +7,7 @@ from typing import Optional, List
 from torch import Tensor
 from torch.nn import Parameter
 
+# Channel numbers for different channel preservation rates
 # ORIGINAL: 64, 128, 256, 512
 channel_nums = [[57, 115, 230, 461],  # 9/10
                 [51, 102, 205, 410],  # 4/5
@@ -25,6 +26,14 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     NUM_WEIGHTS = 9
     def __init__(
             self, embed_dim, num_heads, dropout=0.):
+        """ Initializes a LearnableGlobalLocalMultiheadAttention object
+        
+        Arguments:
+            embed_dim {int} -- number of dimensions
+            num_heads {int} -- number of heads
+        Keyword Arguments:
+            dropout {double} -- dropout value
+        """
         super().__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -41,6 +50,8 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
+        """ Resets the values of the parameters
+        """
         nn.init.xavier_uniform_(self.in_proj_weight)
         nn.init.xavier_uniform_(self.out_proj.weight)
         if self.in_proj_bias is not None:
@@ -49,36 +60,120 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
             
    # global
     def in_proj_global_q(self, query):
+        """ Searches the specified query across the entire transformer
+        
+        Arguments:
+            query {list} -- query value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified query
+        """
         return self._in_proj(query, start=0, end=self.embed_dim)
 
     def in_proj_global_k(self, key):
+        """ Searches the specified key across the entire transformer
+        
+        Arguments:
+            key {list} -- key value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified key
+        """
         return self._in_proj(key, start=self.embed_dim, end=2 * self.embed_dim)
 
     def in_proj_global_v(self, value):
+        """ Searches the specified value across the entire transformer
+        
+        Arguments:
+            value {list} -- value of the specified value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified value
+        """
         return self._in_proj(value, start=2 * self.embed_dim, end=3 * self.embed_dim)
 
     # local left
     def in_proj_local_left_q(self, query):
+        """ Searches the specified query across the local left of the transformer
+        
+        Arguments:
+            query {list} -- query value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified query
+        """
         return self._in_proj(query, start=3 * self.embed_dim, end=4 * self.embed_dim)
 
     def in_proj_local_left_k(self, key):
+        """ Searches the specified key across the local left of the transformer
+        
+        Arguments:
+            key {list} -- key value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified key
+        """
         return self._in_proj(key, start=4 * self.embed_dim, end=5 * self.embed_dim)
 
     # local right
     def in_proj_local_right_q(self, query):
+        """ Searches the specified query across the local right of the transformer
+        
+        Arguments:
+            query {list} -- query value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified query
+        """
         return self._in_proj(query, start=5 * self.embed_dim, end=6 * self.embed_dim)
 
     def in_proj_local_right_k(self, key):
+        """ Searches the specified key across the local right of the transformer
+        
+        Arguments:
+            key {list} -- key value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified key
+        """
         return self._in_proj(key, start=6 * self.embed_dim, end=7 * self.embed_dim)
 
     # local right
     def in_proj_local_q(self, query):
+        """ Searches the specified query across the local area of the transformer
+        
+        Arguments:
+            query {list} -- query value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified query
+        """
         return self._in_proj(query, start=7 * self.embed_dim, end=8 * self.embed_dim)
 
     def in_proj_local_k(self, key):
+        """ Searches the specified key across the local area of the transformer
+        
+        Arguments:
+            key {list} -- key value
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified key
+        """
         return self._in_proj(key, start=8 * self.embed_dim, end=9 * self.embed_dim)
 
     def _in_proj(self, input, start=0, end=None):
+        """ Searches the specified input across a specified range within the transformer
+        
+        Arguments:
+            input {list} -- input value
+
+        Keyword Arguments:
+            start {int} -- start of the search space {default: 0}
+            end {int} -- end of the search space {default: None}
+
+        Returns:
+            torch.Tensor -- linear transformation of the specified input according to the weight and bias
+        """
         weight = self.in_proj_weight
         bias = self.in_proj_bias
         weight = weight[start:end, :]
@@ -89,7 +184,18 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
 
 
     def prepare_local_masking(self, q_left, k_left, q_right, k_right, shape):
+        """ Performs local masking on the specified area of the transformer
+        
+        Arguments:
+            q_left {torch.Tensor} -- query in the local left of the transformer
+            k_left {torch.Tensor} -- key in the local left of the transformer
+            q_right {torch.Tensor} -- query in the local right of the transformer
+            k_right {torch.Tensor} -- key in the local right of the transformer
+            shape {list} -- shape of the transformer
 
+        Returns:
+            torch.Tensor -- local mask for the specified area of the transformer
+        """
         left_attn_weights = torch.bmm(q_left, k_left.transpose(1, 2))
         right_attn_weights = torch.bmm(q_right, k_right.transpose(1, 2))
 
@@ -109,6 +215,16 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
         return local_mask
 
     def compute_lrmask2localmask(self, left_softmax, right_softmax, triu):
+        """ Computes for the local mask on the specified area of the transformer
+        
+        Arguments:
+            left_softmax {torch.Tensor} -- result of softmax function on the local left of the tensor
+            right_softmax {torch.Tensor} -- result of softmax function on the local right of the tensor
+            triu {torch.Tensor} -- upper triangular of the local area of the transformer
+
+        Returns:
+            local_mask {torch.Tensor} -- local mask for the specified area of the transformer
+        """
         triu_t = triu.transpose(1,2)
         left_mask = torch.matmul(left_softmax, triu)
         right_mask = torch.matmul(right_softmax, triu_t)
@@ -121,7 +237,18 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
         return local_mask
 
     def forward(self, query, key, shape, value):
+        """ Performs the forward pass on the attention module
         
+        Arguments:
+            query {list} -- query value
+            key {list} -- key value
+            shape {list} -- shape of the attention module
+            value {list} -- value of the value
+
+        Returns:
+            attn {torch.Tensor} -- linear transformation of attention values 
+            consistent_mask {torch.Tensor} -- aggregate of all local attention masks
+        """
         tgt_len, bsz, embed_dim = query.size()
         assert embed_dim == self.embed_dim
         assert list(query.size()) == [tgt_len, bsz, embed_dim]
@@ -172,6 +299,15 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
 
 class TransformerEncoder(nn.Module):
     def __init__(self, encoder_layer, num_layers, norm=None):
+        """ Initializes a TransformerEncoder object
+        
+        Arguments:
+            encoder_layer {Object} -- specified layer
+            num_layers {int} -- number of layers
+
+        Keyword Arguments:
+            norm {list} -- layer normalization function on the input {default: None}
+        """
         super().__init__()
         self.layers = _get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
@@ -181,6 +317,21 @@ class TransformerEncoder(nn.Module):
                 mask: Optional[Tensor] = None,
                 src_key_padding_mask: Optional[Tensor] = None,
                 pos: Optional[Tensor] = None):
+        """ Performs the forward pass for the transformer encoder
+
+        Arguments:
+            src {list} -- input features of the encoder
+            shape {list} -- shape of the encoder
+
+        Keyword Arguments:
+            mask {torch.Tensor} -- mask applied to the input features
+            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
+            pos {torch.Tensor} -- position of the mask
+
+        Returns:
+            list -- output of the encoder after the forward pass
+            list -- feature values of the encoder
+        """
         output = src
         features = []
 
@@ -198,6 +349,18 @@ class TransformerEncoder(nn.Module):
 class TransformerEncoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
                  activation="relu", normalize_before=False):
+        """ Initializes a TransformerEncoderLayer object
+        
+        Arguments:
+            d_model {int} -- number of dimensions
+            nhead {int} -- number of heads
+
+        Keyword Arguments:
+            dim_feedforward {int} -- number of dimensions of the feed forward layer {default: 2048}
+            dropout {double} -- value of dropout {default: 0.1}
+            activation {string} -- activation function to be used {default: "relu"}
+            normalize_before {boolean} -- whether normalization is to be performed before the forward pass {default: False}
+        """
         super().__init__()
         self.self_attn = LearnableGlobalLocalMultiheadAttention(d_model, nhead, dropout=dropout)
         # Implementation of Feedforward model
@@ -214,6 +377,15 @@ class TransformerEncoderLayer(nn.Module):
         self.normalize_before = normalize_before
 
     def with_pos_embed(self, tensor, pos: Optional[Tensor]):
+        """ Embeds the specified position on the tensor
+        
+        Arguments:
+            tensor {torch.Tensor} -- specified tensor
+            pos {torch.Tensor} -- position to be embedded on the tensor
+
+        Returns:
+            torch.Tensor -- tensor with embedded position
+        """
         return tensor if pos is None else tensor + pos
 
     def forward_post(self,
@@ -221,6 +393,21 @@ class TransformerEncoderLayer(nn.Module):
                      src_mask: Optional[Tensor] = None,
                      src_key_padding_mask: Optional[Tensor] = None,
                      pos: Optional[Tensor] = None):
+        """ Performs normalization after the forward pass
+        
+        Arguments:
+            src {list} -- input features of the encoder layer
+            shape {list} -- shape of the encoder layer
+
+        Keyword Arguments:
+            src_mask {torch.Tensor} -- mask applied to the input features
+            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
+            pos {torch.Tensor} -- position of the mask
+
+        Returns:
+            list -- output of the encoder after the forward pass
+            list -- feature values of the encoder layer after applying the mask
+        """
         q = k = self.with_pos_embed(src, pos)
 
         src2, mask = self.self_attn(q, k, shape, src)
@@ -238,6 +425,21 @@ class TransformerEncoderLayer(nn.Module):
                     src_mask: Optional[Tensor] = None,
                     src_key_padding_mask: Optional[Tensor] = None,
                     pos: Optional[Tensor] = None):
+        """ Performs normalization before the forward pass
+        
+        Arguments:
+            src {list} -- input features of the encoder layer
+            shape {list} -- shape of the encoder layer
+
+        Keyword Arguments:
+            src_mask {torch.Tensor} -- mask applied to the input features
+            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
+            pos {torch.Tensor} -- position of the mask
+
+        Returns:
+            list -- output of the encoder after the forward pass
+            list -- feature values of the encoder layer after applying the mask
+        """
         src2 = self.norm1(src)
         q = k = self.with_pos_embed(src2, pos)
         ssrc2, mask = self.self_attn(q, k, shape, src)
@@ -254,15 +456,45 @@ class TransformerEncoderLayer(nn.Module):
                 src_mask: Optional[Tensor] = None,
                 src_key_padding_mask: Optional[Tensor] = None,
                 pos: Optional[Tensor] = None):
+        """ Implements the forward pass of the transformer encoder layer
+        
+        Arguments:
+            src {list} -- input features of the encoder layer
+            shape {list} -- shape of the encoder layer
+
+        Keyword Arguments:
+            src_mask {torch.Tensor} -- mask applied to the input features
+            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
+            pos {torch.Tensor} -- position of the mask
+
+        Returns:
+            Object -- encoder output and feature values after the forward pass
+        """
         if self.normalize_before:
             return self.forward_pre(src, shape, src_mask, src_key_padding_mask, pos)
         return self.forward_post(src, shape, src_mask, src_key_padding_mask, pos)
 
 def _get_clones(module, N):
+    """ Creates copies of the specified modules
+    
+    Arguments:
+        module {Object} -- module to be copied
+        N {int} -- range of modules to be copied
+
+    Returns:
+        nn.ModuleList -- copied modules
+    """
     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 def _get_activation_fn(activation):
-    """Return an activation function given a string"""
+    """ Returns an activation function given a string
+    
+    Arguments:
+        activation {string} -- name of specified activation function
+
+    Returns:
+        Object -- specified activation function
+    """
     if activation == "relu":
         return F.relu
     if activation == "gelu":
@@ -273,6 +505,15 @@ def _get_activation_fn(activation):
 
 class MAN(nn.Module):
     def __init__(self, features, ratio, transform=True):
+        """ Initializes a MAN object
+        
+        Arguments:
+            features {list} -- input features of the model
+            ratio {int} -- offset corresponding to the channel preservation rate of the model
+
+        Keyword Arguments:
+            transform {boolean} -- whether transform layers are to be added
+        """
         super(MAN, self).__init__()
         self.seen = 0
         self.transform = transform
@@ -345,6 +586,15 @@ class MAN(nn.Module):
         )
 
     def forward(self, x):
+        """ Implements the forward pass of the model
+            
+        Arguments:
+            x {list} -- input to the model
+
+        Returns:
+            torch.Tensor -- ReLU transformation of the input
+            list -- updated features of the model
+        """
         b, c, h, w = x.shape
         rh = int(h) // 16
         rw = int(w) // 16
@@ -408,6 +658,8 @@ class MAN(nn.Module):
         return torch.relu(x), features
     
     def _initialize_weights(self):
+        """ Initializes the weights of the model
+        """
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # nn.init.xavier_normal_(m.weight)
@@ -420,6 +672,18 @@ class MAN(nn.Module):
                 nn.init.constant_(m.bias, 0)
     
 def conv_layers(inp, oup, dilation=False):
+    """ Creates the convolutional layers of the model
+    
+    Arguments:
+        inp {int} -- number of input channels
+        oup {int} -- number of output channels
+
+    Keyword Arguments:
+        dilation {bool} -- whether dilation is to be used
+
+    Returns:
+        nn.Sequential -- Sequential counter containing the convolutional layers
+    """
     if dilation:
         d_rate = 2
     else:
@@ -431,6 +695,15 @@ def conv_layers(inp, oup, dilation=False):
 
 
 def feature_transform(inp, oup):
+    """ Performs feature transformation on the model
+    
+    Arguments:
+        inp {int} -- number of input channels
+        oup {int} -- number of output channels
+
+    Returns:
+        nn.Sequential -- Sequential container storing the updated layers
+    """
     conv2d = nn.Conv2d(inp, oup, kernel_size=1)  # no padding
     relu = nn.ReLU(inplace=True)
     layers = []
@@ -439,5 +712,12 @@ def feature_transform(inp, oup):
 
 
 def pool_layers(ceil_mode=True):
+    """ Performs pooling on the layers of the model
+        
+    Keyword Arguments:
+        ceil_mode {bool} -- True if ceil is used to calculate the output shape; False otherwise
+        
+    Returns:
+        nn.MaxPool2d -- pooling layer
+    """
     return nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=ceil_mode)
-    # return nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=ceil_mode)

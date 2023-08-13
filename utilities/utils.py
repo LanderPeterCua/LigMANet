@@ -10,14 +10,14 @@ import xlsxwriter
 
 
 def to_var(x, use_gpu, requires_grad=False):
-    """Toggles the use of cuda of a Tensor variable
+    """ Toggles the use of cuda of a Tensor variable
 
     Arguments:
         x {torch.Tensor} -- Tensor variable to toggle the CUDA of
-        use_gpu {boolean} -- whether or not use of GPU is permitted
+        use_gpu {boolean} -- True if the use of GPU is permitted; False otherwise
 
     Keyword Arguments:
-        requires_grad {boolean} -- whether or not gradients must be computed
+        requires_grad {boolean} -- True if gradients must be completed; False otherwise
 
     Returns:
         torch.Tensor -- modified Tensor variable
@@ -29,7 +29,7 @@ def to_var(x, use_gpu, requires_grad=False):
 
 
 def mkdir(directory):
-    """Creates the directory if not yet existing
+    """ Creates the directory if not yet existing
 
     Arguments:
         directory {string} -- directory to be created
@@ -39,7 +39,7 @@ def mkdir(directory):
 
 
 def write_print(path, text):
-    """Displays text in console and saves in text file
+    """ Displays text in console and saves in text file
 
     Arguments:
         path {string} -- path to text file
@@ -51,7 +51,7 @@ def write_print(path, text):
     print(text)
 
 def write_to_file(path, text):
-    """Saves text in text file
+    """ Saves text in text file
 
     Arguments:
         path {string} -- path to text file
@@ -62,7 +62,7 @@ def write_to_file(path, text):
     file.close()
 
 def save_plots(file_path, output, labels, ids, save_label=False):
-    """Saves the density maps as images
+    """ Saves the density maps as images
 
     Arguments:
         file_path {string} -- path to save the images
@@ -71,7 +71,7 @@ def save_plots(file_path, output, labels, ids, save_label=False):
         ids {list} -- list of the file names of the dataset images
 
     Keyword Arguments:
-        save_label {boolean} -- toggles whether the labels should be saved as image
+        save_label {boolean} -- True if the labels should be saved as images; False otherwise
             {default: False}
     """
 
@@ -148,7 +148,7 @@ def save_plots(file_path, output, labels, ids, save_label=False):
     workbook.close()
 
 def get_amp_gt_by_value(target, threshold=1e-5):
-    """Creates the attention map groundtruth used by MARUNet
+    """ Creates the attention map groundtruth used by MARUNet
 
     Arguments:
         target {torch.Tensor} -- groundtruth density map

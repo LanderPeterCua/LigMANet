@@ -15,18 +15,28 @@ import time
 import numpy as np
 
 class AverageMeter(object):
-    """Computes and stores the average and current value"""
-
     def __init__(self):
+        """ Initializes an AverageMeter object
+        """
         self.reset()
 
     def reset(self):
+        """ Resets the attributes of the AverageMeter object
+        """
         self.val = 0
         self.avg = 0
         self.sum = 0
         self.count = 0
 
     def update(self, val, n=1):
+        """ Updates the values of the AverageMeter object
+        
+        Arguments:
+            val {int} -- new value of the object
+
+        Keyword Arguments:
+            n {int} -- amount to be added to the count of the object
+        """
         self.val = val
         self.sum += val * n
         self.count += n
@@ -34,12 +44,24 @@ class AverageMeter(object):
 
 
 def save_net(fname, net):
+    """ Saves the network
+    
+    Arguments:
+        fname {string} -- file name
+        net {Object} -- network to be saved
+    """
     with h5py.File(fname, 'w') as h5f:
         for k, v in net.state_dict().items():
             h5f.create_dataset(k, data=v.cpu().numpy())
 
 
 def load_net(fname, net):
+    """ Loads the specified network
+    
+    Arguments:
+        fname {string} -- file name
+        net {Object} -- network to be loaded
+    """
     with h5py.File(fname, 'r') as h5f:
         for k, v in net.state_dict().items():        
             param = torch.from_numpy(np.asarray(h5f[k]))         
@@ -47,6 +69,18 @@ def load_net(fname, net):
             
 
 def save_checkpoint(state, mae_is_best, mse_is_best, path, save_all=False, filename='checkpoint.pth.tar'):
+    """ Saves the current training epoch as a checkpoint
+    
+    Arguments:
+        state {dict} -- current state of the model
+        mae_is_best {bool} -- whether the MAE of the current epoch is the lowest
+        mse_is_best {bool} -- whether the RMSE of the current epoch is the lowest
+        path {string} -- path to the folder where the checkpoint is saved
+
+    Keyword Arguments:
+        save_all {bool} -- True if all epochs are to be saved; False otherwise
+        filename {string} -- file name of the checkpoint
+    """
     torch.save(state, os.path.join(path, filename))
     epoch = state['epoch']
     if save_all:
@@ -59,6 +93,11 @@ def save_checkpoint(state, mae_is_best, mse_is_best, path, save_all=False, filen
 
 
 def cal_para(net):
+    """ Calculates the number of parameters of the model
+    
+    Arguments:
+        net {Object} -- model whose parameters are to be calculated
+    """
     params = list(net.parameters())
     k = 0
     for i in params:
@@ -72,11 +111,21 @@ def cal_para(net):
 
 
 def crop_img_patches(img, size=512):
-    """ crop the test images to patches
+    """ Crops the test images to patches
+    
+    Arguments:
+        img {Object} -- image to be cropped
 
-    while testing UCF data, we load original images, then use crop_img_patches to crop the test images to patches,
-    calculate the crowd count respectively and sum them together finally
+    Keyword Arguments:
+        size {int} -- maximum size of the cropped images
+
+    Returns:
+        array -- cropped images
     """
+    
+    ''' While testing UCF data, we load original images, then use crop_img_patches to crop the test images to patches,
+        calculate the crowd count respectively and sum them together finally. 
+    '''
     w = img.shape[3]
     h = img.shape[2]
     x = int(w/size)+1
@@ -103,11 +152,28 @@ def crop_img_patches(img, size=512):
     return patches
 
 def cosine_similarity(stu_map, tea_map):
+    """ Calculates the cosine similarity between the student and teacher feature maps
+    
+    Arguments:
+        stu_map {torch.Tensor} -- student feature map
+        tea_map {torch.Tensor} -- teacher feature map
+
+    Returns:
+        torch.Tensor -- quantification of difference between the student and teacher feature maps
+    """
     similiar = 1-F.cosine_similarity(stu_map, tea_map, dim=1)
     loss = similiar.sum()
     return loss
 
 def cal_dense_fsp(features):
+    """ Calculates the dense flow of solution procedure among the model features
+    
+    Arguments:
+        features {array} -- feature values of the model
+
+    Returns:
+        array -- flow of solution procedure matrix among the features
+    """
     fsp = []
     for groups in features:
         for i in range(len(groups)):
@@ -124,7 +190,18 @@ def cal_dense_fsp(features):
     return fsp
 
 def scale_process(features, scale=[3, 2, 1], ceil_mode=True):
-    # process features for multi-scale dense fsp
+    """ Processes features for multi-scale dense FSPs
+    
+    Arguments:
+        features {array} -- feature values of the model
+        scale {array} -- scales of the model
+
+    Keyword Arguments:
+        ceil_mode {bool} -- whether ceil is used to calculate the output shape
+
+    Returns:
+        array -- updated feature values of the model
+    """
     new_features = []
     for i in range(len(features)):
         if i >= len(scale):
@@ -139,7 +216,18 @@ def scale_process(features, scale=[3, 2, 1], ceil_mode=True):
     return new_features
 
 def scale_process_CAN(features, scale=[3, 2, 1], ceil_mode=True):
-    # process features for multi-scale dense fsp
+    """ Processes features for multi-scale dense FSPs for CAN
+    
+    Arguments:
+        features {array} -- feature values of the model
+        scale {array} -- scales of the model
+
+    Keyword Arguments:
+        ceil_mode {bool} -- whether ceil is used to calculate the output shape
+
+    Returns:
+        array -- updated feature values of the model
+    """
     new_features = []
     for i in range(len(features)):
         if i >= len(scale):
@@ -152,6 +240,15 @@ def scale_process_CAN(features, scale=[3, 2, 1], ceil_mode=True):
 
 
 def gram(x, y):
+    """ Helper function for computing the FSP matrix
+    
+    Arguments:
+        x {torch.Tensor} -- first feature
+        y {torch.Tensor} -- second feature
+
+    Returns:
+        torch.Tensor -- result of the matrix multiplication of x and y
+    """
     n = x.shape[0]
     c1 = x.shape[1]
     c2 = y.shape[1]

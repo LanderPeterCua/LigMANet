@@ -12,6 +12,21 @@ import math
 
 class CSRNetDataset(Dataset):
     def __init__(self, config, root, shape=None, shuffle=True, transform=None,  train=False, seen=0, batch_size=1, num_workers=4):
+        """ Initializes a CSRNetDataset object
+        
+        Arguments:
+            config {Object} -- configurations for the model
+            root {string} -- path to the root directory
+        
+        Keyword Arguments:
+            shape {list} -- shape of the dataset {default: None}
+            shuffle {boolean} -- whether the dataset is shuffled {default: True}
+            transform {Object} -- transformation performed on the dataset {default: None}
+            train {boolean} -- whether the dataset is to be used for training {default: False}
+            seen {int} -- number of input images seen {default: 0}
+            batch_size {int} -- number of samples processed per batch {default: 1}
+            num_workers {int} -- number of subprocesses used for data loading {default: 4}
+        """
         # if train:
         #     root = root *4
         # random.shuffle(root)
@@ -44,9 +59,23 @@ class CSRNetDataset(Dataset):
             self.nSamples = len(self.lines)
         
     def __len__(self):
+        """ Gets the length of the dataset
+        
+        Returns:
+            int -- number of images in the dataset
+        """
         return self.nSamples
 
     def __getitem__(self, index):
+        """ Retrieves the item at the specified index
+        
+        Arguments:
+            index {int} -- index of item to be retrieved
+        
+        Returns:
+            Image -- image at the specified index
+            np.array -- ground truth density map of the image
+        """
         assert index <= len(self), 'index range error' 
         
         img_path = self.lines[index]
@@ -61,16 +90,38 @@ class CSRNetDataset(Dataset):
 
         if self.transform is not None:
             img = self.transform(img)
-
+            
         return img,target
 
     def get_lines(self):
+        """ Gets the paths to the images of the dataset
+        
+        Returns:
+            list -- paths to the dataset images
+        """
         return self.lines
 
     def get_val_lines(self):
+        """ Gets the paths to the images in the validation set
+        
+        Returns:
+            list -- paths to the validation set images
+        """
         return self.val_lines
 
     def load_data(self, img_path, train = True):
+        """ Loads the image data
+        
+        Arguments:
+            img_path {string} -- path to the dataset images
+        
+        Keyword Arguments:
+            train {bool} -- whether the dataset is used for training {default: True}
+        
+        Returns:
+            Image -- retrieved image
+            np.array -- ground truth density map of the image
+        """
         gt_path = img_path.replace('.jpg','.h5').replace('images','density_maps')
         img = Image.open(img_path).convert('RGB')
         gt_file = h5py.File(gt_path)

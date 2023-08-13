@@ -6,10 +6,25 @@ import torch
 import torchvision.transforms.functional as F
 from torchvision import transforms
 import random
+import re
 import numpy as np
-from utilities.augmentations import enhance_contrast
+from utilities.augmentations import enhance_contrast, save_image, save_gt
 
 def random_crop(im_h, im_w, crop_h, crop_w):
+    """ Performs random cropping on the input image
+    
+    Arguments:
+        im_h {int} -- height of the input image
+        im_w {int} -- width of the input image
+        crop_h {int} -- target height of the cropped image
+        crop_w {int} -- target width of the cropped image
+    
+    Returns:
+        int -- random height of the cropped image 
+        int -- random width of the cropped image
+        int -- target height of the cropped image
+        int -- target width of the cropped image
+    """
     res_h = im_h - crop_h
     res_w = im_w - crop_w
     i = random.randint(0, res_h)
@@ -18,6 +33,18 @@ def random_crop(im_h, im_w, crop_h, crop_w):
 
 
 def cal_innner_area(c_left, c_up, c_right, c_down, bbox):
+    """ Calculates the inner area of the image
+    
+    Arguments:
+        c_left {list} -- left bound of the image crop
+        c_up {list} -- upper bound of the image crop
+        c_right {list} -- right bound of the image crop
+        c_down {list} -- lower bound of the image crop
+        bbox {list} -- bounding box of the image crop
+    
+    Returns:
+        double -- inner area of the image
+    """
     inner_left = np.maximum(c_left, bbox[:, 0])
     inner_up = np.maximum(c_up, bbox[:, 1])
     inner_right = np.minimum(c_right, bbox[:, 2])
@@ -25,15 +52,32 @@ def cal_innner_area(c_left, c_up, c_right, c_down, bbox):
     inner_area = np.maximum(inner_right-inner_left, 0.0) * np.maximum(inner_down-inner_up, 0.0)
     return inner_area
 
-
-
 class Crowd(data.Dataset):
     def __init__(self, root_path, crop_size,
                  downsample_ratio, 
-                 dataset, cc_50_val, cc_50_test, is_gray, augment_contrast, augment_contrast_factor, method):
+                 dataset, cc_50_val, cc_50_test, is_gray, augment_contrast, augment_contrast_factor, augment_save_location,
+                 augment_save, method):
+        """ Initializes a Crowd object
         
+        Arguments:
+            root_path {string} -- path to the root folder
+            crop_size {int} -- crop size of the images
+            downsample_ratio {int} -- downsample ratio of the images
+            dataset {string} -- name of the dataset to be used
+            cc_50_val {int} -- fold number of the validation set for the UCF-CC-50 dataset
+            cc_50_test {int} -- fold number of the test set for the UCF-CC-50 dataset
+            is_gray {boolean} -- whether the images are in grayscale
+            augment_contrast {boolean} -- whether contrast augmentation is applied
+            augment_contrast_factor {double} -- contrast factor for image contrast augmentation
+            augment_save_location {string} -- path to the folder where the augmented images are saved
+            augment_save {boolean} -- whether the augmented images are to be saved
+            method {string} -- how the data will be used (for model training, validation, or testing)
+        """
         self.contrast = augment_contrast
         self.contrast_factor = augment_contrast_factor
+        self.augment_save = augment_save
+        self.augment_save_location = augment_save_location
+        self.dataset = dataset
         
         if dataset != 'UCFCC50':
             self.root_path = root_path
@@ -77,9 +121,24 @@ class Crowd(data.Dataset):
             ])
 
     def __len__(self):
+        """ Gets the length of the dataset
+        
+        Returns:
+            int -- number of images in the dataset
+        """
         return len(self.im_list)
 
     def __getitem__(self, item):
+        """ Retrieves the item at the specified index
+        
+        Arguments:
+            index {int} -- index of item to be retrieved
+        
+        Returns:
+            Image -- image at the specified index
+            int -- number of keypoints in the image
+            string -- name of the image
+        """
         img_path = self.im_list[item]
         gd_path = img_path.replace('jpg', 'npy')
         try:
@@ -88,18 +147,41 @@ class Crowd(data.Dataset):
             print(os.path.basename(img_path).split('.')[0])
         if self.method == 'train':
             keypoints = np.load(gd_path)
-            return self.train_transform(img, keypoints)
+            return self.train_transform(img, keypoints, int(re.search(r'\d+',img_path.split('/')[-1]).group()), gd_path)
         elif self.method == 'val' or self.method == 'test':
             keypoints = np.load(gd_path)
             img = self.trans(img)
             name = os.path.basename(img_path).split('.')[0]
             return img, len(keypoints), name
 
-    def train_transform(self, img, keypoints):
-        """Perform contrast enhancement if enabled"""
+    def train_transform(self, img, keypoints, img_path, gd_path):
+        """ Transforms the image for model training
+        
+        Arguments:
+            img {Image} -- input image to be used
+            keypoints {np.array} -- ground truth density map of the image
+            img_path {string} -- path to the input image
+            gd_path {string} -- path to the ground truth density map of the input image
+            
+        Returns:
+            Image -- transformed version of the input image
+            float -- float representation of the ground truth density map
+            float -- float representation of the generated density map
+            int -- smaller dimension between the image width and height
+        """
+        # Perform contrast enhancement if enabled
         if self.contrast == True:
             img = enhance_contrast(img, self.contrast_factor)
-        """random crop image patch and find people in it"""
+            if self.augment_save == True:
+                if self.dataset == "UCFCC50":
+                    image_append = 30
+                else:
+                    image_append = 400
+                filename = "IMG_"+(str(img_path+image_append))
+                save_image(img, self.augment_save_location, filename)
+                save_gt(gd_path, self.augment_save_location, filename)
+                
+        # Random crop image patch and find people in it
         wd, ht = img.size
         assert len(keypoints) > 0
         if random.random() > 0.88:

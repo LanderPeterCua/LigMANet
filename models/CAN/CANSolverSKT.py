@@ -30,17 +30,28 @@ from compression.skt_utils import cal_para, cosine_similarity, scale_process_CAN
 import xlsxwriter
 
 class AverageMeter(object):
-    """Computes and stores the average and current value"""
     def __init__(self):
+        """ Initializes an AverageMeter object
+        """
         self.reset()
 
     def reset(self):
+        """ Resets the values of the AverageMeter object
+        """
         self.val = 0
         self.avg = 0
         self.sum = 0
         self.count = 0
 
     def update(self, val, n=1):
+        """ Updates the values of the AverageMeter object
+        
+        Arguments:
+            val {int} -- value of val
+
+        Keyword Arguments:
+            n {int} -- value of n {default: 1}
+        """
         self.val = val
         self.sum += val * n
         self.count += n
@@ -48,8 +59,14 @@ class AverageMeter(object):
 
 
 class CANSolverSKT(object):
-
     def __init__(self, config, paths):
+        """
+        Initializes a CAN Solver object
+
+        Arguments:
+            config {Object} -- configurations of the model
+            paths {Object} -- paths to the resources used by the model  
+        """
         self.config = config
         self.paths = paths
         self.lr = self.config.lr
@@ -61,6 +78,8 @@ class CANSolverSKT(object):
         self.build_model()
 
     def build_model(self):
+        """ Instantiates the student and teacher models, loss criterion, and optimizer
+        """
         self.teacher_model = CAN_teacher()
         print('(Teacher Model) ', end='')
         print_num_params(self.teacher_model)  # include 1x1 conv transform parameters
@@ -100,6 +119,11 @@ class CANSolverSKT(object):
         print(self.optimizer)
     
     def start(self, config):
+        """ Starts model training
+        
+        Arguments:
+            config {Object} -- configurations of the model
+        """
         if self.config.dataset == 'UCFCC50':
             save_folder_name = 'SKT-' + str(config.model) + ' ' + config.dataset + '_fold' + str(self.config.cc50_val) + ' ' + str(date.today().strftime("%d-%m-%Y") + ' ' + str(time.strftime("%H_%M_%S", time.localtime())))
         else:
@@ -190,7 +214,17 @@ class CANSolverSKT(object):
             
     
     def train(self, teacher_model, student_model, criterion, optimizer, epoch, f, config):
-
+        """ Performs training on the student model
+        
+        Arguments:
+            teacher_model {Object} -- teacher model to be used for training
+            student_model {Object} -- student model to be trained
+            criterion {Object} -- criterion to be used
+            optimizer {Object} -- optimizer to be used
+            epoch {int} -- starting epoch
+            f {File} -- file where the training details are saved
+            config {Object} -- configurations used for training
+        """
         losses_h = AverageMeter()
         losses_s = AverageMeter()
         losses_fsp = AverageMeter()
@@ -316,6 +350,17 @@ class CANSolverSKT(object):
         f.close()        
     
     def validate(self, model, criterion, config):
+        """ Performs model validation
+        
+        Arguments:
+            model {Object} -- model to be evaluated
+            criterion {Object} -- criterion to be used
+            config {Object} -- configurations used for model validation
+        
+        Returns:
+            double -- resulting MAE of the model evaluation
+            double -- resulting RMSE of the model evaluation
+        """
         test_loader = torch.utils.data.DataLoader(
         # initially validated using CANDataset class not CANDatasetSKT
         CANDatasetSKT.listDataset(config, self.data,
@@ -361,6 +406,8 @@ class CANSolverSKT(object):
         return mae, rmse
     
     def test(self):
+        """ Performs model testing
+        """
         self.tests_save_path = os.path.join('./tests', self.config.weights.split("/")[1])
         try:
             print("Creating test save path directory...")
@@ -487,13 +534,11 @@ class CANSolverSKT(object):
         workbook.close()
 
 def print_num_params(model):
-    '''
-    Prints the total number of parameters
+    """ Prints the total number of parameters of the model
     
     Arguments:
         model {Object} -- the model to be used
-    '''
-
+    """
     num_params = 0
     for name, param in model.named_parameters():
         if 'transform' in name:

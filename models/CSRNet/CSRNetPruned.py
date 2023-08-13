@@ -4,6 +4,11 @@ from torchvision import models
 
 class CSRNetPruned(nn.Module):
     def __init__(self, load_weights=False):
+        """ Initializes a CSRNetPruned object
+        
+        Keyword Arguments:
+            load_weights {boolean} -- whether pretrained weights are to be loaded {default: False}
+        """
         super(CSRNetPruned, self).__init__()
         self.seen = 0
         self.frontend_feat = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512]
@@ -18,12 +23,22 @@ class CSRNetPruned(nn.Module):
                 list(self.frontend.state_dict().items())[i][1].data[:] = list(mod.state_dict().items())[i][1].data[:]
 
     def forward(self,x):
+        """ Implements a forward pass
+        
+        Arguments:
+            x {list} -- input features of the model
+        
+        Returns:
+            list -- updated model features
+        """
         x = self.frontend(x)
         x = self.backend(x)
         x = self.output_layer(x)
         return x
 
     def _initialize_weights(self):
+        """ Initializes the weights of the model
+        """
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.normal_(m.weight, std=0.01)
@@ -35,6 +50,19 @@ class CSRNetPruned(nn.Module):
             
                 
 def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
+    """ Creates the layers of the model
+    
+    Arguments:
+        cfg {list} -- number of channels per layer of the model
+
+    Keyword Arguments:
+        in_channels {int} -- number of input channels {default: 3}
+        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
+        dilation {boolean} -- whether dilation is to be implemented {default: False}
+
+    Returns:
+        nn.Sequential -- Sequential container storing the layers of the model
+    """
     if dilation:
         d_rate = 2
     else:
