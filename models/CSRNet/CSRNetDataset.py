@@ -96,31 +96,28 @@ class CSRNetDataset(Dataset):
     def get_lines(self):
         """ Gets the paths to the images of the dataset
         
-        Returns:
-            list -- paths to the dataset images
+            :returns: Paths to the dataset images
+            :rtype: list
         """
         return self.lines
 
     def get_val_lines(self):
         """ Gets the paths to the images in the validation set
         
-        Returns:
-            list -- paths to the validation set images
+            :returns: Paths to the validation set images
+            :rtype: list
         """
         return self.val_lines
 
     def load_data(self, img_path, train = True):
         """ Loads the image data
         
-        Arguments:
-            img_path {string} -- path to the dataset images
-        
-        Keyword Arguments:
-            train {bool} -- whether the dataset is used for training {default: True}
-        
-        Returns:
-            Image -- retrieved image
-            np.array -- ground truth density map of the image
+            :param string img_path: path to the dataset images
+            :param boolean train: whether the dataset is used for training
+
+            :returns:
+                - (:py:class:`Image`) - retrieved image
+                - (:py:class:`np.array`) - ground truth density map of the image
         """
         gt_path = img_path.replace('.jpg','.h5').replace('images','density_maps')
         img = Image.open(img_path).convert('RGB')

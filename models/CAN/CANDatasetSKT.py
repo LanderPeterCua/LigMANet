@@ -90,16 +90,13 @@ class listDataset(Dataset):
 def load_data(img_path,train=True, dataset='Shanghaitech-A'):
     """ Loads the image data
         
-        Arguments:
-            img_path {string} -- path to the dataset images
-        
-        Keyword Arguments:
-            train {boolean} -- whether the dataset is used for training {default: True}
-            dataset {string} -- name of dataset to be used {default: 'Shanghaitech-A'}
-        
-        Returns:
-            Image -- retrieved image
-            np.array -- ground truth density map of the image
+        :param string img_path: path to the dataset images
+        :param boolean train: whether the dataset is used for training
+        :param string dataset: name of dataset to be used
+
+        :returns:
+            - (:py:class:`Image`) - retrieved image
+            - (:py:class:`np.array`) - ground truth density map of the image
     """
     gt_path = img_path.replace('.jpg', '.h5').replace('images', 'density_maps')
     img = Image.open(img_path).convert('RGB')
@@ -150,14 +147,12 @@ def load_data(img_path,train=True, dataset='Shanghaitech-A'):
 def reshape_target(target, down_sample=3):
     """ Downsamples the ground truth to 1/8 of its original size
     
-    Arguments:
-        target {np.array} -- ground truth density map to be downsampled
-    
-    Keyword Arguments:
-        down_sample {int} -- ratio to downsample the ground truth density map
-    
-    Returns:
-        np.array -- downsampled ground truth density map
+        :param np.array target: ground truth density map to be downsampled
+        :param int down_sample: ratio to downsample the ground truth density map
+
+        :returns: Downsampled ground truth density map
+
+        :rtype: np.array
     """
     height = target.shape[0]
     width = target.shape[1]

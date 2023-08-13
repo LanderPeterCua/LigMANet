@@ -12,15 +12,13 @@ import xlsxwriter
 def to_var(x, use_gpu, requires_grad=False):
     """ Toggles the use of cuda of a Tensor variable
 
-    Arguments:
-        x {torch.Tensor} -- Tensor variable to toggle the CUDA of
-        use_gpu {boolean} -- True if the use of GPU is permitted; False otherwise
+        :param torch.Tensor x: Tensor variable to toggle the CUDA of
+        :param boolean use_gpu: whether the use of GPU is permitted
+        :param boolean requires_grad: whether gradients must be completed
 
-    Keyword Arguments:
-        requires_grad {boolean} -- True if gradients must be completed; False otherwise
+        :returns: Modified Tensor variable
 
-    Returns:
-        torch.Tensor -- modified Tensor variable
+        :rtype: torch.Tensor
     """
     if torch.cuda.is_available() and use_gpu:
         x = x.cuda()
@@ -31,8 +29,7 @@ def to_var(x, use_gpu, requires_grad=False):
 def mkdir(directory):
     """ Creates the directory if not yet existing
 
-    Arguments:
-        directory {string} -- directory to be created
+        :param string directory: directory to be created
     """
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -41,9 +38,8 @@ def mkdir(directory):
 def write_print(path, text):
     """ Displays text in console and saves in text file
 
-    Arguments:
-        path {string} -- path to text file
-        text {string} -- text to display and save
+        :param string path: path to text file
+        :param string text: text to display and save
     """
     file = open(path, 'a')
     file.write(text + '\n')
@@ -53,9 +49,8 @@ def write_print(path, text):
 def write_to_file(path, text):
     """ Saves text in text file
 
-    Arguments:
-        path {string} -- path to text file
-        text {string} -- text to save
+        :param string path: path to text file
+        :param string text: text to display and save
     """
     file = open(path, 'a')
     file.write(text + '\n')
@@ -64,15 +59,11 @@ def write_to_file(path, text):
 def save_plots(file_path, output, labels, ids, save_label=False):
     """ Saves the density maps as images
 
-    Arguments:
-        file_path {string} -- path to save the images
-        output {torch.Tensor} -- density map outputted by the model
-        labels {torch.Tensor} -- groundtruth density map
-        ids {list} -- list of the file names of the dataset images
-
-    Keyword Arguments:
-        save_label {boolean} -- True if the labels should be saved as images; False otherwise
-            {default: False}
+        :param string file_path: path to save the images
+        :param torch.Tesnor output: density map outputted by the model
+        :param torch.Tensor labels: groundtruth density map
+        :param list ids: list of the file names of the dataset images
+        :param boolean save_label: whether the labels should be saved as images
     """
 
     # output folder
@@ -150,11 +141,8 @@ def save_plots(file_path, output, labels, ids, save_label=False):
 def get_amp_gt_by_value(target, threshold=1e-5):
     """ Creates the attention map groundtruth used by MARUNet
 
-    Arguments:
-        target {torch.Tensor} -- groundtruth density map
-
-    Keyword Arguments:
-        threshold {float} -- threshold value used for generating the attention map {default: 1e-5}
+        :param torch.Tensor target: groundtruth density map
+        :param float threshold: threshold value used for generating the attention map
     """
     seg_map = (target>threshold).float().cuda()
     return seg_map

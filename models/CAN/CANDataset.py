@@ -88,15 +88,12 @@ class listDataset(Dataset):
     def load_data(self, img_path,train = True):
         """ Loads the image data
         
-        Arguments:
-            img_path {string} -- path to the dataset images
-        
-        Keyword Arguments:
-            train {boolean} -- whether the dataset is used for training {default: True}
-        
-        Returns:
-            Image -- retrieved image
-            np.array -- ground truth density map of the image
+            :param string img_path: path to the dataset images
+            :param boolean train: whether the dataset is used for training
+
+            :returns:
+                - (:py:class:`Image`) - retrieved image
+                - (:py:class:`np.array`) - ground truth density map of the image
         """
         gt_path = img_path.replace('.jpg','.h5').replace('images','density_maps')
         img = Image.open(img_path).convert('RGB')

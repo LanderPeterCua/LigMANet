@@ -31,11 +31,8 @@ class AverageMeter(object):
     def update(self, val, n=1):
         """ Updates the values of the AverageMeter object
         
-        Arguments:
-            val {int} -- new value of the object
-
-        Keyword Arguments:
-            n {int} -- amount to be added to the count of the object
+            :param int val: new value of the object
+            :param int n: amount to be added to the count of the object
         """
         self.val = val
         self.sum += val * n
@@ -46,9 +43,8 @@ class AverageMeter(object):
 def save_net(fname, net):
     """ Saves the network
     
-    Arguments:
-        fname {string} -- file name
-        net {Object} -- network to be saved
+        :param string fname: file name
+        :param Object net: network to be saved
     """
     with h5py.File(fname, 'w') as h5f:
         for k, v in net.state_dict().items():
@@ -58,9 +54,8 @@ def save_net(fname, net):
 def load_net(fname, net):
     """ Loads the specified network
     
-    Arguments:
-        fname {string} -- file name
-        net {Object} -- network to be loaded
+        :param string fname: file name
+        :param Object net: network to be loaded
     """
     with h5py.File(fname, 'r') as h5f:
         for k, v in net.state_dict().items():        
@@ -71,15 +66,12 @@ def load_net(fname, net):
 def save_checkpoint(state, mae_is_best, mse_is_best, path, save_all=False, filename='checkpoint.pth.tar'):
     """ Saves the current training epoch as a checkpoint
     
-    Arguments:
-        state {dict} -- current state of the model
-        mae_is_best {bool} -- whether the MAE of the current epoch is the lowest
-        mse_is_best {bool} -- whether the RMSE of the current epoch is the lowest
-        path {string} -- path to the folder where the checkpoint is saved
-
-    Keyword Arguments:
-        save_all {bool} -- True if all epochs are to be saved; False otherwise
-        filename {string} -- file name of the checkpoint
+        :param dictionary state: current state of the model
+        :param boolean mae_is_best: whether the MAE of the current epoch is the lowest
+        :param boolean mse_is_best: whether the RMSE of the current epoch is the lowest
+        :param string path: path to the folder where the checkpoint is saved
+        :param boolean save_all: whether all epochs are to be saved
+        :param string filename: file name of the checkpoint
     """
     torch.save(state, os.path.join(path, filename))
     epoch = state['epoch']
@@ -95,8 +87,7 @@ def save_checkpoint(state, mae_is_best, mse_is_best, path, save_all=False, filen
 def cal_para(net):
     """ Calculates the number of parameters of the model
     
-    Arguments:
-        net {Object} -- model whose parameters are to be calculated
+        :param Object net: model whose parameters are to be calculated
     """
     params = list(net.parameters())
     k = 0
@@ -113,14 +104,12 @@ def cal_para(net):
 def crop_img_patches(img, size=512):
     """ Crops the test images to patches
     
-    Arguments:
-        img {Object} -- image to be cropped
+        :param Object img: image to be cropped
+        :param int size: maximum size of the cropped images
 
-    Keyword Arguments:
-        size {int} -- maximum size of the cropped images
+        :returns: Cropped images
 
-    Returns:
-        array -- cropped images
+        :rtype: list
     """
     
     ''' While testing UCF data, we load original images, then use crop_img_patches to crop the test images to patches,
@@ -154,12 +143,12 @@ def crop_img_patches(img, size=512):
 def cosine_similarity(stu_map, tea_map):
     """ Calculates the cosine similarity between the student and teacher feature maps
     
-    Arguments:
-        stu_map {torch.Tensor} -- student feature map
-        tea_map {torch.Tensor} -- teacher feature map
+        :param torch.Tensor stu_map: student feature map
+        :param torch.Tensor tea_map: teacher feature map
 
-    Returns:
-        torch.Tensor -- quantification of difference between the student and teacher feature maps
+        :returns: quantification of difference between the student and teacher feature maps
+
+        :rtype: torch.Tensor
     """
     similiar = 1-F.cosine_similarity(stu_map, tea_map, dim=1)
     loss = similiar.sum()
@@ -168,11 +157,11 @@ def cosine_similarity(stu_map, tea_map):
 def cal_dense_fsp(features):
     """ Calculates the dense flow of solution procedure among the model features
     
-    Arguments:
-        features {array} -- feature values of the model
+        :param list features: feature values of the model
 
-    Returns:
-        array -- flow of solution procedure matrix among the features
+        :returns: flow of solution procedure matrix among the features
+
+        :rtype: list
     """
     fsp = []
     for groups in features:
@@ -192,15 +181,13 @@ def cal_dense_fsp(features):
 def scale_process(features, scale=[3, 2, 1], ceil_mode=True):
     """ Processes features for multi-scale dense FSPs
     
-    Arguments:
-        features {array} -- feature values of the model
-        scale {array} -- scales of the model
+        :param list features: feature values of the model
+        :param list scale: scales of the model
+        :param boolean ceil_mode: whether ceil is used to calculate the output shape
 
-    Keyword Arguments:
-        ceil_mode {bool} -- whether ceil is used to calculate the output shape
+        :returns: Updated feature values of the model
 
-    Returns:
-        array -- updated feature values of the model
+        :rtype: list
     """
     new_features = []
     for i in range(len(features)):
@@ -218,15 +205,13 @@ def scale_process(features, scale=[3, 2, 1], ceil_mode=True):
 def scale_process_CAN(features, scale=[3, 2, 1], ceil_mode=True):
     """ Processes features for multi-scale dense FSPs for CAN
     
-    Arguments:
-        features {array} -- feature values of the model
-        scale {array} -- scales of the model
+        :param list features: feature values of the model
+        :param list scale: scales of the model
+        :param boolean ceil_mode: whether ceil is used to calculate the output shape
 
-    Keyword Arguments:
-        ceil_mode {bool} -- whether ceil is used to calculate the output shape
+        :returns: Updated feature values of the model
 
-    Returns:
-        array -- updated feature values of the model
+        :rtype: list
     """
     new_features = []
     for i in range(len(features)):
@@ -242,12 +227,12 @@ def scale_process_CAN(features, scale=[3, 2, 1], ceil_mode=True):
 def gram(x, y):
     """ Helper function for computing the FSP matrix
     
-    Arguments:
-        x {torch.Tensor} -- first feature
-        y {torch.Tensor} -- second feature
+        :param torch.Tensor x: first feature
+        :param torch.Tensor y: second feature
 
-    Returns:
-        torch.Tensor -- result of the matrix multiplication of x and y
+        :returns: Result of the matrix multiplication of x and y
+
+        :rtype: torch.Tensor
     """
     n = x.shape[0]
     c1 = x.shape[1]

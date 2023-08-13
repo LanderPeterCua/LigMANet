@@ -6,7 +6,6 @@ class Timer(object):
     def __init__(self):
         """ Initializes a Timer object.
         """
-
         self.total_time = 0.
         self.calls = 0
         self.start_time = 0.
@@ -24,12 +23,12 @@ class Timer(object):
     def toc(self, average=True):
         """ Stops the timer.
 
-        Keyword Arguments:
-            average {boolean} -- determines whether the return value is the
+            :param boolean average: whether the return value is the
                 average time across all calls or only the last call
 
-        Returns:
-            float -- the average time across all calls or only the last call
+            :returns: The average time across all calls or only the last call
+
+            :rtype: float
         """
 
         self.diff = time.time() - self.start_time

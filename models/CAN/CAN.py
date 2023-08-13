@@ -7,12 +7,9 @@ class ContextualModule(nn.Module):
     def __init__(self, features, out_features=512, sizes=(1, 2, 3, 6)):
         """ Initializes a ContextualModule object
     
-        Arguments:
-            features {list} -- input features of the model
-
-        Keyword Arguments:
-            out_features {int} -- number of output features {default: 512}
-            sizes {tuple} -- sizes to rescale the features {default: (1, 2, 3, 6)}
+            :param list features: input features of the model
+            :param int out_features: number of output features
+            :param tuple sizes: sizes to rescale the features {default: (1, 2, 3, 6)}
         """
         super(ContextualModule, self).__init__()
         self.scales = []
@@ -52,11 +49,11 @@ class ContextualModule(nn.Module):
     def forward(self, feats):
         """ Implements the forward pass of the contextual module
         
-        Arguments:
-            feats {list} -- input features of the model
-        
-        Returns:
-            double -- result of the ReLU activation function on the model
+            :param list feats: input features of the model
+
+            :returns: Result of the ReLU activation function on the model
+
+            :rtype: double
         """
         h, w = feats.size(2), feats.size(3)
         multi_scales = [F.upsample(input=stage(feats), size=(h, w), mode='bilinear') for stage in self.scales]
@@ -90,11 +87,11 @@ class CANNet(nn.Module):
     def forward(self,x):
         """ Implements the forward pass of the model
         
-        Arguments:
-            x {list} -- input features of the model
-        
-        Returns:
-            list -- updated features of the model
+            :param list x: input features of the model
+
+            :returns: updated features of the model
+
+            :rtype: list
         """
         x = self.frontend(x)
         x = self.context(x)
@@ -117,16 +114,14 @@ class CANNet(nn.Module):
 def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
     """ Creates the layers of the model
     
-    Arguments:
-        cfg {list} -- number of channels per layer of the model
+        :param list cfg: number of channels per layer of the model
+        :param int in_channels: number of input channels
+        :param boolean batch_norm: whether batch normalization is to be implemented
+        :param boolean dilation: whether dilation is to be implemented {default: False}
 
-    Keyword Arguments:
-        in_channels {int} -- number of input channels {default: 3}
-        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
-        dilation {boolean} -- whether dilation is to be implemented {default: False}
+        :returns: Sequential container storing the layers of the model
 
-    Returns:
-        nn.Sequential -- Sequential container storing the layers of the model
+        :rtype: nn.Sequential
     """
     if dilation:
         d_rate = 2

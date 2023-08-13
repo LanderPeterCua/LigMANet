@@ -22,28 +22,25 @@ from utilities.pruner import VanillaPruner
 from models.CSRNet.CSRNetUtils import save_checkpoint
 
 class AverageMeter(object):
-        """ Initializes an AverageMeter object
-        """
         def __init__(self):
+            """ Initializes an AverageMeter object
+            """
             self.reset()
 
-        """ Resets the values of the AverageMeter object
-        """
         def reset(self):
+            """ Resets the values of the AverageMeter object
+            """
             self.val = 0
             self.avg = 0
             self.sum = 0
             self.count = 0
 
-        """ Updates the values of the AverageMeter object
-        
-        Arguments:
-            val {int} -- value of val
-        
-        Keyword Arguments:
-            n {int} -- value of n {default: 1}
-        """
         def update(self, val, n=1):
+            """ Updates the values of the AverageMeter object
+        
+                :param int val: value of val
+                :param int n: value of n
+            """
             self.val = val
             self.sum += val * n
             self.count += n
@@ -52,8 +49,7 @@ class AverageMeter(object):
 class CSRNetSolverPruned(object):
 
     def __init__(self, config, paths):
-        """
-        Initializes a CSRNet Solver object
+        """ Initializes a CSRNet Solver object
 
         Arguments:
             config {Object} -- configurations of the model
@@ -72,12 +68,10 @@ class CSRNetSolverPruned(object):
         self.build_model()
 
     def print_num_params(self, model, name):
-        """
-        Prints the structure of the network and the total number of parameters
+        """ Prints the structure of the network and the total number of parameters
 
-        Arguments:
-            model {Object} -- the model to be used
-            name {str} -- name of the model
+            :param Object model: the model to be used
+            :param string name: name of the model
         """
         num_params = 0
         for name, param in model.named_parameters():
@@ -105,6 +99,10 @@ class CSRNetSolverPruned(object):
         self.print_num_params(self.model, self.config.model) 
 
     def start(self, config):
+        """ Starts model training
+        
+            :param Object config: configurations of the model
+        """
         global best_prec1
     
         best_prec1 = 1e6
@@ -188,13 +186,12 @@ class CSRNetSolverPruned(object):
     def train(self, model, criterion, optimizer, epoch, config, pruner):
         """ Performs model training
         
-        Arguments:
-            model {Object} -- model to be used
-            criterion {Object} -- criterion to be used
-            optimizer {Object} -- optimizer to be used
-            epoch {int} -- starting epoch
-            config {Object} -- configurations used for training
-            pruner {Object} -- tool for performing pruning
+            :param Object model: model to be used
+            :param Object criterion: criterion to be used
+            :param Object optimizer: optimizer to be used
+            :param int epoch: starting epoch
+            :param Object config: configurations used for training
+            :param Object pruner: tool for performing pruning
         """
         losses = AverageMeter()
         batch_time = AverageMeter()
@@ -278,10 +275,13 @@ class CSRNetSolverPruned(object):
     def validate(self, model, criterion, config):
         """ Performs model validation
         
-        Arguments:
-            model {Object} -- model to be evaluated
-            criterion {Object} -- criterion to be used
-            config {Object} -- configurations used for model validation
+            :param Object model: model to be evaluated
+            :param Object criterion: criterion to be used
+            :param Object config: configurations used for model validation
+            
+            :returns:
+                - (:py:class:`double`) - resulting MAE of the model evaluation
+                - (:py:class:`double`) - resulting RMSE of the model evaluation
         """
         print ('begin test')
         test_loader = torch.utils.data.DataLoader(
@@ -320,9 +320,8 @@ class CSRNetSolverPruned(object):
     def adjust_learning_rate(self, optimizer, epoch):
         """ Sets the learning rate of the model 
         
-        Arguments:
-            optimizer {Object} -- optimizer used by the model
-            epoch {int} -- current epoch number of the model
+            :param Object optimizer: optimizer used by the model
+            :param int epoch: current epoch number of the model
         """
         self.config.lr = self.original_lr
         

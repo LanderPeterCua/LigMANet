@@ -34,14 +34,13 @@ model_urls = {'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'}
 def train_collate(batch):
     """ Collates the relevant details of the batch of input images for model training
     
-    Arguments:
-        batch {list} -- batch of input images
-        
-    Returns:
-        torch.Tensor -- tensor representation of the list of input images
-        list -- list of tensor representations of the ground truth density maps
-        list -- list of tensor representations of the generated density maps
-        torch.FloatTensor -- tensor representation of the list of minimum dimensions of the input images
+        :param list batch: batch of input images
+
+        :returns:
+            - (:py:class:`torch.Tensor`) - tensor representation of the list of input images
+            - (:py:class:`list`) - list of tensor representations of the ground truth density maps
+            - (:py:class:`list`) - list of tensor representations of the generated density maps
+            - (:py:class:`torch.FloatTensor`) - tensor representation of the list of minimum dimensions of the input images
     """
     transposed_batch = list(zip(*batch))
     images = torch.stack(transposed_batch[0], 0)
@@ -53,14 +52,12 @@ def train_collate(batch):
 def make_layers(cfg, batch_norm=False):
     """ Creates the layers of the model
     
-    Arguments:
-        cfg {list} -- number of channels per layer of the model
+        :param list cfg: number of channels per layer of the model
+        :param boolean batch_norm: whether batch normalization is to be implemented
 
-    Keyword Arguments:
-        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
+        :returns: Sequential container storing the layers of the model
 
-    Returns:
-        nn.Sequential -- Sequential container storing the layers of the model
+        :rtype: nn.Sequential
     """
     layers = []
     in_channels = 3
@@ -79,8 +76,9 @@ def make_layers(cfg, batch_norm=False):
 def init_MAN():
     """ Initializes the MAN model with the appropriate backbone network
     
-    Returns:
-        Object -- initialized model
+        :returns: Initialized model
+
+        :rtype: Object
     """
     # For EfficientNet backbones, download the corresponding model from the Hugging Face repository
     if (BACKBONE_MODEL == "efficientnet-b0"):
@@ -331,8 +329,7 @@ class MANSolver(Trainer):
     def test(self, args):
         """ Performs model testing
         
-        Arguments:
-            args {Object} -- arguments used by the model
+            :param Object args: arguments used by the model
         """
         epoch_start = time.time()
         args = args

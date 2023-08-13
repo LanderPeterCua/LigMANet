@@ -35,10 +35,10 @@ model_urls = {'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'}
 def init_MAN_teacher():
     """ Initializes the MAN teacher model
     
-    Returns:
-        Object -- initialized model
+        :returns: Initialized model
+
+        :rtype: Object
     """
-    
     # Use the VGG 19-layer model (configuration "E") pre-trained on ImageNet
     model = MANteacher(make_layers(cfg['E']))
     model.load_state_dict(model_zoo.load_url(model_urls['vgg19']), strict=False)
@@ -47,10 +47,10 @@ def init_MAN_teacher():
 def init_MAN_student(ratio):
     """ Initializes the MAN student model
     
-    Returns:
-        Object -- initialized model
+        :returns: Initialized model
+
+        :rtype: Object
     """
-    
     # Use the VGG 19-layer model (configuration "E") pre-trained on ImageNet
     model = MANstudent(make_layers(cfg['E']), ratio)
     model.load_state_dict(model_zoo.load_url(model_urls['vgg19']), strict=False)
@@ -59,14 +59,12 @@ def init_MAN_student(ratio):
 def make_layers(cfg, batch_norm=False):
     """ Creates the layers of the model
     
-    Arguments:
-        cfg {list} -- number of channels per layer of the model
+        :param list cfg: number of channels per layer of the model
+        :param boolean batch_norm: whether batch normalization is to be implemented
 
-    Keyword Arguments:
-        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
+        :returns: Sequential container storing the layers of the model
 
-    Returns:
-        nn.Sequential -- Sequential container storing the layers of the model
+        :rtype: nn.Sequential
     """
     layers = []
     in_channels = 3
@@ -85,14 +83,13 @@ def make_layers(cfg, batch_norm=False):
 def train_collate(batch):
     """ Collates the relevant details of the batch of input images for model training
     
-    Arguments:
-        batch {list} -- batch of input images
-        
-    Returns:
-        torch.Tensor -- tensor representation of the list of input images
-        list -- list of tensor representations of the ground truth density maps
-        list -- list of tensor representations of the generated density maps
-        torch.FloatTensor -- tensor representation of the list of minimum dimensions of the input images
+        :param list batch: batch of input images
+
+        :returns:
+            - (:py:class:`torch.Tensor`) - tensor representation of the list of input images
+            - (:py:class:`list`) - list of tensor representations of the ground truth density maps
+            - (:py:class:`list`) - list of tensor representations of the generated density maps
+            - (:py:class:`torch.FloatTensor`) - tensor representation of the list of minimum dimensions of the input images
     """
     transposed_batch = list(zip(*batch))
     images = torch.stack(transposed_batch[0], 0)
@@ -424,8 +421,7 @@ class MANSolverSKT(Trainer):
     def test(self, args):
         """ Performs model testing
         
-        Arguments:
-            args {Object} -- arguments used by the model
+            :param Object args: arguments used by the model
         """
         args = args
 

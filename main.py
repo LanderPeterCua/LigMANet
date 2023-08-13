@@ -185,9 +185,8 @@ def main():
 def parse_args(config, paths):
     """ Parses additional arguments used by MAN
     
-    Arguments:
-        config {Object} -- Config object containing the specified configurations
-        paths {Object} -- Paths object containing the specified paths
+        :param Object config: Config object containing the specified configurations
+        :param Object paths: Paths object containing the specified paths
     """
     config = config
     paths = paths

@@ -8,17 +8,14 @@ from collections.abc import Iterable
 def prune_vanilla_elementwise(param, sparsity, fn_importance=lambda x: xs.abs()):
     """ Element-wise vanilla pruning
     
-    Arguments:
-        param {torch.Tensor} -- weight of conv/fc layer
-        sparsity {float} -- pruning sparsity
-    
-    Keyword Arguments:
-        fn_importance {function} -- inputs 'param' and returns the importance of
-                                    each position in 'param',
-                                    {default: lambda x: x.abs()}
-    
-    Returns:
-        torch.ByteTensor -- mask for zeros
+        :param torch.Tensor param: weight of conv/fc layer
+        :param float sparsity: pruning sparsity
+        :param function fn_importance: inputs 'param' and returns the importance of
+                                    each position in 'param'
+
+        :returns: mask for zeros
+
+        :rtype: torch.ByteTensor
     """
     sparsity = min(max(0.0, sparsity), 1.0)
     if sparsity == 1.0:
@@ -44,17 +41,14 @@ def prune_vanilla_elementwise(param, sparsity, fn_importance=lambda x: xs.abs())
 def prune_vanilla_kernelwise(param, sparsity, fn_importance=lambda x: x.norm(1, -1)):
     """ Kernel-wise vanilla pruning, the importance determined by L1 norm
     
-    Arguments:
-        param {torch.Tensor} -- weight of conv/fc layer
-        sparsity {float} -- pruning sparsity
-        
-    Keyword Arguments:
-        fn_importance {function} -- inputs 'param' as size (param.size(0) * param.size(1), -1) and
-                                    returns the importance of each kernel in 'param'
-                                    {default: lambda x: x.norm(1, -1)}
-    
-    Returns:
-        torch.ByteTensor -- mask for zeros
+        :param torch.Tensor param: weight of conv/fc layer
+        :param float sparsity: pruning sparsity
+        :param function fn_importance: inputs 'param' as size (param.size(0) * param.size(1), -1) and
+                                    returns the importance of each kernel in 'param
+
+        :returns: mask for zeros
+
+        :rtype: torch.ByteTensor
     """
     assert param.dim() >= 3
     sparsity = min(max(0.0, sparsity), 1.0)
@@ -76,17 +70,14 @@ def prune_vanilla_kernelwise(param, sparsity, fn_importance=lambda x: x.norm(1, 
 def prune_vanilla_filterwise(sparsity, param, fn_importance=lambda x: x.norm(1, -1)):
     """ Filter-wise vanilla pruning, the importance determined by L1 norm
     
-    Arguments:
-        param {torch.Tensor} -- weight of conv/fc layer
-        sparsity {float} -- pruning sparsity
-        
-    Keyword Arguments:
-        fn_importance {function} -- inputs 'param' as size (param.size(0), -1) and
-                                returns the importance of each filter in 'param',
-                                {default: lambda x: x.norm(1, -1)}
-    
-    Returns:
-        torch.ByteTensor -- mask for zeros
+        :param torch.Tensor param: weight of conv/fc layer
+        :param float sparsity: pruning sparsity
+        :param function fn_importance: inputs 'param' as size (param.size(0), -1) and
+                                returns the importance of each filter in 'param'
+
+        :returns: mask for zeros
+
+        :type: torch.ByteTensor
     """
     assert param.dim() >= 3
     sparsity = min(max(0.0, sparsity), 1.0)
@@ -150,14 +141,8 @@ class VanillaPruner(object):
     def load_state_dict(self, state_dict, replace_rule=True):
         """ Recovers pruner
         
-        Arguments:
-            state_dict {dict} -- a dictionary containing a whole state of the Pruner
-            
-        Keyword Arguments:
-            replace_rule {bool} -- whether to use rule settings in 'state_dict'
-            
-        Returns:
-            VanillaPruner
+            :param dictionary state_dict: a dictionary containing a whole state of the Pruner
+            :param boolean replace_rule: whether to use rule settings in 'state_dict'
         """
         if replace_rule:
             self.rule = state_dict['rule']
@@ -181,8 +166,9 @@ class VanillaPruner(object):
     def state_dict(self):
         """ Returns a dictionary containing a whole state of the Pruner
         
-        Returns:
-            dict - a dictionary containing a whole state of the Pruner
+            :returns: A dictionary containing a whole state of the Pruner
+
+            :rtype: dictionary
         """
         state_dict = dict()
         state_dict['rule'] = [r[:-1] for r in self.rule]
@@ -192,16 +178,14 @@ class VanillaPruner(object):
     def prune_param(self, param, param_name, stage=0, verbose=False):
         """ Prune parameters
         
-        Arguments:
-            param {torch.Tensor} -- parameter to be pruned
-            param_name {str} -- name of param
-        
-        Keyword Arguments:
-            stage {int} -- the pruning stage {default: 0}
-            verbose {bool} -- whether to print the pruning details
-        
-        Returns:
-            torch.ByteTensor -- mask for zeros
+            :param torch.Tensor param: parameter to be pruned
+            :param string param_name: name of param
+            :param int stage: the pruning stage
+            :param boolean verbose: whether to print the pruning details
+
+            :returns: mask for zeros
+
+            :rtype: torch.ByteTensor
         """
         rule_id = -1
         for idx, r in enumerate(self.rule):
@@ -235,13 +219,10 @@ class VanillaPruner(object):
     def prune(self, model, stage=0, update_masks=False, verbose=False):
         """ Prunes models
         
-        Arguments:
-            model {torch.nn.Module} -- model to be pruned
-            
-        Keyword Arguments:
-            stage {int} -- the pruning stage {default: 0}
-            update_masks {bool} -- whether to update masks {default: False}
-            verbose {bool} -- whether to print the pruning details {default: False}
+            :param torch.nn.Module model: model to be pruned
+            :param int stage: the pruning stage {default: 0}
+            :param boolean update_masks: whether to update masks
+            :param boolean verbose: whether to print the pruning details
         """
         update_masks = True if update_masks or len(self.masks) == 0 else False
         if verbose:

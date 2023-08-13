@@ -5,8 +5,7 @@ from datetime import datetime
 def setlogger(path):
     """ Sets the logger for the model
     
-    Arguments:
-        path {string} -- path to the logger
+        :param string path: path to the logger
     """
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -24,9 +23,8 @@ def setlogger(path):
 def print_num_params(model, name):
     """ Prints the number of parameters of the model
     
-    Arguments:
-        model {Object} -- model to be used
-        name {string} -- name of the model
+        :param Object model: model to be used
+        :param string name: name of the model
     """
     num_params = 0
     for name, param in model.named_parameters():
@@ -69,8 +67,7 @@ class Save_Handle(object):
     def append(self, save_path):
         """ Adds a new model training checkpoint to the list of checkpoints to be saved 
         
-        Arguments:
-            save_path {string} -- path of the checkpoint to be saved
+            :param string save_path: path of the checkpoint to be saved
         """
         
         # If the total number of saved checkpoints does not exceed the specified maximum number, add
@@ -102,11 +99,8 @@ class AverageMeter(object):
     def update(self, val, n=1):
         """ Updates the values of the AverageMeter object
         
-        Arguments:
-            val {int} -- new value of the object
-
-        Keyword Arguments:
-            n {int} -- amount to be added to the count of the object
+            :param int val: new value of the object
+            :param int n: amount to be added to the count of the object
         """
         self.val = val
         self.sum += val * n
@@ -116,15 +110,17 @@ class AverageMeter(object):
     def get_avg(self):
         """ Gets the average of the AverageMeter object
         
-        Returns:
-            double -- average as computed by the object
+            :returns: Average as computed by the object
+
+            :rtype: double
         """
         return self.avg
 
     def get_count(self):
         """ Gets the total count of the AverageMeter object
         
-        Returns:
-            int -- number of data instances stored in the AverageMeter object
+            :returns: number of data instances stored in the AverageMeter object
+
+            :rtype: int
         """
         return self.count

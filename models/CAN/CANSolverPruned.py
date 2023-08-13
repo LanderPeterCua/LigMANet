@@ -42,11 +42,8 @@ class AverageMeter(object):
     def update(self, val, n=1):
         """ Updates the values of the AverageMeter object
         
-        Arguments:
-            val {int} -- value of val
-
-        Keyword Arguments:
-            n {int} -- value of n {default: 1}
+            :param int val: value of val
+            :param int n: value of n
         """
         self.val = val
         self.sum += val * n
@@ -76,9 +73,8 @@ class CANSolverPruned(object):
     def print_num_params(self, model, name):
         """ Prints the structure of the network and the total number of parameters
 
-        Arguments:
-            model {Object} -- the model to be used
-            name {string} -- name of the model
+            :param Object model: the model to be used
+            :param string name: name of the model
         """
         num_params = 0
         for name, param in model.named_parameters():
@@ -140,8 +136,7 @@ class CANSolverPruned(object):
     def start(self, config):
         """ Prunes the model and starts model training
         
-        Arguments:
-            config {Object} -- configurations of the model
+            :param Object config: configurations of the model
         """
         if self.config.dataset == 'UCFCC50':
             save_folder_name = str(config.model) + ' ' + config.dataset + '_fold' + str(self.config.cc50_val) + ' ' + str(date.today().strftime("%d-%m-%Y") + ' ' + str(time.strftime("%H_%M_%S", time.localtime())))
@@ -239,13 +234,12 @@ class CANSolverPruned(object):
     def train(self, model, criterion, optimizer, epoch, f, config):
         """ Performs model training
         
-        Arguments:
-            model {Object} -- model to be used
-            criterion {Object} -- criterion to be used
-            optimizer {Object} -- optimizer to be used
-            epoch {int} -- starting epoch
-            f {File} -- file where the training details are saved
-            config {Object} -- configurations used for training
+            :param Object model: model to be used
+            :param Object criterion: criterion to be used
+            :param Object optimizer: optimizer to be used
+            :param int epoch: starting epoch
+            :param File f: file where the training details are saved
+            :param Object config: configurations used for training
         """
         losses = AverageMeter()
         batch_time = AverageMeter()
@@ -329,14 +323,13 @@ class CANSolverPruned(object):
     def validate(self, model, criterion, config):
         """ Performs model validation
         
-        Arguments:
-            model {Object} -- model to be evaluated
-            criterion {Object} -- criterion to be used
-            config {Object} -- configurations used for model validation
-        
-        Returns:
-            double -- resulting MAE of the model evaluation
-            double -- resulting RMSE of the model evaluation
+            :param Object model: model to be evaluated
+            :param Object criterion: criterion to be used
+            :param Object config: configurations used for model validation
+
+            :returns:
+                - (:py:class:`double`) - resulting MAE of the model evaluation
+                - (:py:class:`double`) - resulting RMSE of the model evaluation
         """
         test_loader = torch.utils.data.DataLoader(
         CANDataset.listDataset(config, self.data,

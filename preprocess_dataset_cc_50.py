@@ -10,16 +10,15 @@ import argparse
 def cal_new_size(im_h, im_w, min_size, max_size):
     """ Calculates the new size of the input image
     
-    Arguments:
-        im_h {int} -- height of the input image
-        im_w {int} -- width of the input image
-        min_size {int} -- required minimum size of the input images
-        max_size {int} -- required maximum size of the input images
+        :param int im_h: height of the input image
+        :param int im_w: width of the input image
+        :param int min_size: required minimum size of the input images
+        :param int max_size: required maximum size of the input images
 
-    Returns:
-        int -- new image height
-        int -- new image width
-        double -- ratio of new image dimensions to the original image dimensions
+        :returns:
+            - (:py:class:`int`) - new image height
+            - (:py:class:`int`) - new image width
+            - (:py:class:`double`) - ratio of new image dimensions to the original image dimensions
     """
     if im_h < im_w:
         if im_h < min_size:
@@ -49,11 +48,11 @@ def cal_new_size(im_h, im_w, min_size, max_size):
 def find_dis(point):
     """ Finds the distance between a set of points
     
-    Arguments:
-        point {array} -- coordinates of the set of points
+        :param list point: coordinates of the set of points
 
-    Returns:
-        double -- distance between the specified points
+        :returns: Distance between the specified points
+
+        :rtype: double
     """
     square = np.sum(point*points, axis=1)
     dis = np.sqrt(np.maximum(square[:, None] - 2*np.matmul(point, point.T) + square[None, :], 0.0))
@@ -63,12 +62,11 @@ def find_dis(point):
 def generate_data(im_path):
     """ Extracts the relevant data from the input image
     
-    Arguments:
-        im_path {string} -- path to the input image
+        :param string im_path: path to the input image
 
-    Returns:
-        Image -- input image
-        array -- coordinates of head locations on the density map
+        :returns:
+            - (:py:class:`Image`) - input image
+            - (:py:class:`list`) - coordinates of head locations on the density map
     """
     im = Image.open(im_path)
     im_w, im_h = im.size

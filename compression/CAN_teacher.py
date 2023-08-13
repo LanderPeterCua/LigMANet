@@ -7,12 +7,9 @@ class ContextualModule(nn.Module):
     def __init__(self, features, out_features=512, sizes=(1, 2, 3, 6)):
         """ Initializes a ContextualModule object
         
-        Arguments:
-            features {list} -- feature values of the module
-
-        Keyword Arguments:
-            out_features {int} -- final number of channels the features after passing through the bottleneck layer
-            sizes {list} -- sizes used to scale the modules
+            :param list features: feature values of the module
+            :param int out_features: final number of channels the features after passing through the bottleneck layer
+            :param list sizes: sizes used to scale the modules
         """
         super(ContextualModule, self).__init__()
         self.scales = []
@@ -24,12 +21,11 @@ class ContextualModule(nn.Module):
     def __make_weight(self,feature,scale_feature):
         """ Creates the model weights
         
-        Arguments:
-            feature {list} -- original feature values of the model
-            scale_feature {list} -- scaled feature values of the model
+            :param list feature: original feature values of the model
+            :param list scale_feature: scaled feature values of the model
 
-        Returns:
-            double -- result of the sigmoid function on the features
+            :returns: result of the sigmoid function on the features
+            :rtype: double
         """
         weight_feature = feature - scale_feature
         return F.sigmoid(self.weight_net(weight_feature))
@@ -37,12 +33,12 @@ class ContextualModule(nn.Module):
     def _make_scale(self, features, size):
         """ Scales the pooling and convolutional layers of the model
         
-        Arguments:
-            features {list} -- feature values of the model
-            size {int} -- target output size of the layer
+            :param list features: feature values of the model
+            :param int size: target output size of the layer
 
-        Returns:
-            nn.Sequential -- Sequential container storing the prior and convolutional layers
+            :returns: Sequential container storing the prior and convolutional layers
+
+            :rtype: nn.Sequential
         """
         prior = nn.AdaptiveAvgPool2d(output_size=(size, size))
         conv = nn.Conv2d(features, features, kernel_size=1, bias=False)
@@ -51,11 +47,11 @@ class ContextualModule(nn.Module):
     def forward(self, feats):
         """ Implements the forward pass of the model features
         
-        Arguments:
-            feats {list} -- features of the model
+            :param list feats: features of the model
 
-        Returns:
-            double -- result of the ReLU function on the bottleneck layer
+            :returns: Result of the ReLU function on the bottleneck layer
+
+            :rtype: double
         """
         h, w = feats.size(2), feats.size(3)
         multi_scales = [F.upsample(input=stage(feats), size=(h, w), mode='bilinear') for stage in self.scales]
@@ -68,8 +64,7 @@ class CANNet(nn.Module):
     def __init__(self, load_weights=False):
         """ Initializes a CANNet object
         
-        Keyword Arguments:
-            load_weights {bool} -- whether pretrained weights are to be loaded
+            :param boolean load_weights: whether pretrained weights are to be loaded
         """
         super(CANNet, self).__init__()
         self.seen = 0
@@ -90,11 +85,11 @@ class CANNet(nn.Module):
     def forward(self,x):
         """ Implements the forward pass of the entire model
         
-        Arguments:
-            x {list} -- input features of the model
+            :param list x: input features of the model
 
-        Returns:
-            list -- updated features of the model after one forward pass
+            :returns: Updated features of the model after one forward pass
+
+            :rtype: list
         """
         self.features = []
         x = self.frontend(x)
@@ -123,10 +118,9 @@ class CANNet(nn.Module):
         def get(model, input, output):
             """ Appends the hooks to the model features
             
-            Arguments:
-                model {Object} -- model where the hooks are appended
-                input {list} -- input features of the model
-                output {list} -- output features of the model
+                :param Object model: model where the hooks are appended
+                :param list input: input features of the model
+                :param list output: output features of the model
             """
             # function will be automatically called each time, since the hook is injected
             self.features.append(output.detach())
@@ -144,16 +138,14 @@ class CANNet(nn.Module):
 def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
     """ Creates the layers of the model
     
-    Arguments:
-        cfg {list} -- number of channels per layer of the model
+        :param list cfg: number of channels per layer of the model
+        :param int in_channels: number of input channels
+        :param boolean batch_norm: whether batch normalization is to be implemented
+        :param boolean dilation: whether dilation is to be implemented {default: False}
 
-    Keyword Arguments:
-        in_channels {int} -- number of input channels {default: 3}
-        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
-        dilation {boolean} -- whether dilation is to be implemented {default: False}
+        :returns: Sequential container storing the layers of the model
 
-    Returns:
-        nn.Sequential -- Sequential container storing the layers of the model
+        :rtype: nn.Sequential
     """
     if dilation:
         d_rate = 2

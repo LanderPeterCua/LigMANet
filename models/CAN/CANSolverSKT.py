@@ -46,11 +46,8 @@ class AverageMeter(object):
     def update(self, val, n=1):
         """ Updates the values of the AverageMeter object
         
-        Arguments:
-            val {int} -- value of val
-
-        Keyword Arguments:
-            n {int} -- value of n {default: 1}
+            :param int val: value of val
+            :param int n: value of n
         """
         self.val = val
         self.sum += val * n
@@ -119,10 +116,9 @@ class CANSolverSKT(object):
         print(self.optimizer)
     
     def start(self, config):
-        """ Starts model training
+        """ Prunes the model and starts model training
         
-        Arguments:
-            config {Object} -- configurations of the model
+            :param Object config: configurations of the model
         """
         if self.config.dataset == 'UCFCC50':
             save_folder_name = 'SKT-' + str(config.model) + ' ' + config.dataset + '_fold' + str(self.config.cc50_val) + ' ' + str(date.today().strftime("%d-%m-%Y") + ' ' + str(time.strftime("%H_%M_%S", time.localtime())))
@@ -214,16 +210,14 @@ class CANSolverSKT(object):
             
     
     def train(self, teacher_model, student_model, criterion, optimizer, epoch, f, config):
-        """ Performs training on the student model
+        """ Performs model training
         
-        Arguments:
-            teacher_model {Object} -- teacher model to be used for training
-            student_model {Object} -- student model to be trained
-            criterion {Object} -- criterion to be used
-            optimizer {Object} -- optimizer to be used
-            epoch {int} -- starting epoch
-            f {File} -- file where the training details are saved
-            config {Object} -- configurations used for training
+            :param Object model: model to be used
+            :param Object criterion: criterion to be used
+            :param Object optimizer: optimizer to be used
+            :param int epoch: starting epoch
+            :param File f: file where the training details are saved
+            :param Object config: configurations used for training
         """
         losses_h = AverageMeter()
         losses_s = AverageMeter()
@@ -352,14 +346,13 @@ class CANSolverSKT(object):
     def validate(self, model, criterion, config):
         """ Performs model validation
         
-        Arguments:
-            model {Object} -- model to be evaluated
-            criterion {Object} -- criterion to be used
-            config {Object} -- configurations used for model validation
-        
-        Returns:
-            double -- resulting MAE of the model evaluation
-            double -- resulting RMSE of the model evaluation
+            :param Object model: model to be evaluated
+            :param Object criterion: criterion to be used
+            :param Object config: configurations used for model validation
+
+            :returns:
+                - (:py:class:`double`) - resulting MAE of the model evaluation
+                - (:py:class:`double`) - resulting RMSE of the model evaluation
         """
         test_loader = torch.utils.data.DataLoader(
         # initially validated using CANDataset class not CANDatasetSKT
@@ -534,11 +527,10 @@ class CANSolverSKT(object):
         workbook.close()
 
 def print_num_params(model):
-    """ Prints the total number of parameters of the model
-    
-    Arguments:
-        model {Object} -- the model to be used
-    """
+    """ Prints the structure of the network and the total number of parameters
+
+            :param Object model: the model to be used
+        """
     num_params = 0
     for name, param in model.named_parameters():
         if 'transform' in name:

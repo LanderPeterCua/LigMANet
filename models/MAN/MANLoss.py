@@ -6,8 +6,8 @@ class Bay_Loss(Module):
     def __init__(self, use_background, device):
         """ Initializes a Bay_Loss object
         
-        use_background {boolean} -- whether the image background will be considered
-        device {string} -- device to be used for the computation of Bayesian Loss
+            :param boolean use_background: whether the image background will be considered
+            :param string device: device to be used for the computation of Bayesian Loss
         """
         super(Bay_Loss, self).__init__()
         self.device = device
@@ -16,13 +16,13 @@ class Bay_Loss(Module):
     def forward(self, prob_list, target_list, pre_density):
         """ Implements the forward pass
         
-        Arguments:
-            prob_list {list} -- list of input images
-            target_list {list} -- list of ground truth density maps
-            pre_density {list} -- list of generated density maps
-        
-        Returns:
-            double -- loss value of the forward pass
+            :param list prob_list: list of input images
+            :param list target_list: list of ground truth density maps
+            :param list pre_density: list of generated density maps
+
+            :returns: loss value of the forward pass
+
+            :rtype: double
         """ 
         loss = 0
         for idx, prob in enumerate(prob_list):  # iterative through each sample
@@ -74,12 +74,12 @@ class Post_Prob(Module):
     def forward(self, points, st_sizes):
         """ Implements the forward pass
         
-        Arguments:
-            points {list} -- list of points in the input image density maps
-            st_sizes {list} -- minimum dimension size of each of the input images
-            
-        Returns:
-            list -- list of generated density maps
+            :param list points: list of points in the input image density maps
+            :param list st_sizes: minimum dimension size of each of the input images
+
+            :returns: list of generated density maps
+
+            :rtype: list
         """
         num_points_per_image = [len(points_per_image) for points_per_image in points]
         all_points = torch.cat(points, dim=0)

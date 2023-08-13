@@ -13,17 +13,16 @@ from utilities.augmentations import enhance_contrast, save_image
 def random_crop(im_h, im_w, crop_h, crop_w):
     """ Performs random cropping on the input image
     
-    Arguments:
-        im_h {int} -- height of the input image
-        im_w {int} -- width of the input image
-        crop_h {int} -- target height of the cropped image
-        crop_w {int} -- target width of the cropped image
-    
-    Returns:
-        int -- random height of the cropped image 
-        int -- random width of the cropped image
-        int -- target height of the cropped image
-        int -- target width of the cropped image
+        :param int im_h: height of the input image
+        :param int im_w: width of the input image
+        :param int crop_h: target height of the cropped image
+        :param int crop_w: target width of the cropped image
+
+        :returns:
+            - (:py:class:`int`) - random height of the cropped image
+            - (:py:class:`int`) - random width of the cropped image 
+            - (:py:class:`int`) - target height of the cropped image
+            - (:py:class:`int`) - target width of the cropped image
     """
     res_h = im_h - crop_h
     res_w = im_w - crop_w
@@ -35,15 +34,15 @@ def random_crop(im_h, im_w, crop_h, crop_w):
 def cal_innner_area(c_left, c_up, c_right, c_down, bbox):
     """ Calculates the inner area of the image
     
-    Arguments:
-        c_left {list} -- left bound of the image crop
-        c_up {list} -- upper bound of the image crop
-        c_right {list} -- right bound of the image crop
-        c_down {list} -- lower bound of the image crop
-        bbox {list} -- bounding box of the image crop
-    
-    Returns:
-        double -- inner area of the image
+        :param list c_left: left bound of the image crop
+        :param list c_up: upper bound of the image crop
+        :param list c_right: right bound of the image crop
+        :param list c_down: lower bound of the image crop
+        :param list bbox: bounding box of the image crop
+
+        :returns: inner area of the image
+
+        :rtype: double
     """
     inner_left = np.maximum(c_left, bbox[:, 0])
     inner_up = np.maximum(c_up, bbox[:, 1])
@@ -157,17 +156,16 @@ class Crowd(data.Dataset):
     def train_transform(self, img, keypoints, img_path, gd_path):
         """ Transforms the image for model training
         
-        Arguments:
-            img {Image} -- input image to be used
-            keypoints {np.array} -- ground truth density map of the image
-            img_path {string} -- path to the input image
-            gd_path {string} -- path to the ground truth density map of the input image
-            
-        Returns:
-            Image -- transformed version of the input image
-            float -- float representation of the ground truth density map
-            float -- float representation of the generated density map
-            int -- smaller dimension between the image width and height
+            :param Image img: input image to be used
+            :param np.array keypoints: ground truth density map of the image
+            :param string img_path: path to the input image
+            :param string gd_path: path to the ground truth density map of the input image
+
+            :returns:
+                - (:py:class:`Image`) - transformed version of the input image
+                - (:py:class:`float`) - float representation of the ground truth density map
+                - (:py:class:`float`) - float representation of the generated density map
+                - (:py:class:`int`) - smaller dimension between the image width and height
         """
         # Perform contrast enhancement if enabled
         if self.contrast == True:

@@ -54,33 +54,33 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     def in_proj_global_q(self, query):
         """ Searches the specified query across the entire transformer
         
-        Arguments:
-            query {list} -- query value
+            :param list query: query value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified query
+            :returns: Linear transformation of the specified query
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(query, start=0, end=self.embed_dim)
 
     def in_proj_global_k(self, key):
         """ Searches the specified key across the entire transformer
         
-        Arguments:
-            key {list} -- key value
+            :param list key: key value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified key
+            :returns: Linear transformation of the specified key
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(key, start=self.embed_dim, end=2 * self.embed_dim)
 
     def in_proj_global_v(self, value):
         """ Searches the specified value across the entire transformer
         
-        Arguments:
-            value {list} -- value of the specified value
+            :param list value: value of the specified value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified value
+            :returns: Linear transformation of the specified value
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(value, start=2 * self.embed_dim, end=3 * self.embed_dim)
 
@@ -88,22 +88,22 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     def in_proj_local_left_q(self, query):
         """ Searches the specified query across the local left of the transformer
         
-        Arguments:
-            query {list} -- query value
+            :param list query: query value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified query
+            :returns: Linear transformation of the specified query
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(query, start=3 * self.embed_dim, end=4 * self.embed_dim)
 
     def in_proj_local_left_k(self, key):
         """ Searches the specified key across the local left of the transformer
         
-        Arguments:
-            key {list} -- key value
+            :param list key: key value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified key
+            :returns: Linear transformation of the specified key
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(key, start=4 * self.embed_dim, end=5 * self.embed_dim)
 
@@ -111,22 +111,22 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     def in_proj_local_right_q(self, query):
         """ Searches the specified query across the local right of the transformer
         
-        Arguments:
-            query {list} -- query value
+            :param list query: query value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified query
+            :returns: Linear transformation of the specified query
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(query, start=5 * self.embed_dim, end=6 * self.embed_dim)
 
     def in_proj_local_right_k(self, key):
         """ Searches the specified key across the local right of the transformer
         
-        Arguments:
-            key {list} -- key value
+            :param list key: key value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified key
+            :returns: Linear transformation of the specified key
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(key, start=6 * self.embed_dim, end=7 * self.embed_dim)
 
@@ -134,27 +134,27 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     def in_proj_local_q(self, query):
         """ Searches the specified query across the local area of the transformer
         
-        Arguments:
-            query {list} -- query value
+            :param list query: query value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified query
+            :returns: Linear transformation of the specified query
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(query, start=7 * self.embed_dim, end=8 * self.embed_dim)
 
     def in_proj_local_k(self, key):
         """ Searches the specified key across the local area of the transformer
         
-        Arguments:
-            key {list} -- key value
+            :param list key: key value
 
-        Returns:
-            torch.Tensor -- linear transformation of the specified key
+            :returns: Linear transformation of the specified key
+
+            :rtype: torch.Tensor
         """
         return self._in_proj(key, start=8 * self.embed_dim, end=9 * self.embed_dim)
 
     def _in_proj(self, input, start=0, end=None):
-         """ Searches the specified input across a specified range within the transformer
+        """ Searches the specified input across a specified range within the transformer
         
         Arguments:
             input {list} -- input value
@@ -178,15 +178,15 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     def prepare_local_masking(self, q_left, k_left, q_right, k_right, shape):
         """ Performs local masking on the specified area of the transformer
         
-        Arguments:
-            q_left {torch.Tensor} -- query in the local left of the transformer
-            k_left {torch.Tensor} -- key in the local left of the transformer
-            q_right {torch.Tensor} -- query in the local right of the transformer
-            k_right {torch.Tensor} -- key in the local right of the transformer
-            shape {list} -- shape of the transformer
+            :param torch.Tensor q_left: query in the local left of the transformer
+            :param torch.Tensor k_left: key in the local left of the transformer
+            :param torch.Tensor q_right: query in the local right of the transformer
+            :param torch.Tensor k_right: key in the local right of the transformer
+            :param list shape: shape of the transformer
 
-        Returns:
-            local_mask {torch.Tensor} -- local mask for the specified area of the transformer
+            :returns: Local mask for the specified area of the transformer
+
+            :rtype: torch.Tensor
         """
         left_attn_weights = torch.bmm(q_left, k_left.transpose(1, 2))
         right_attn_weights = torch.bmm(q_right, k_right.transpose(1, 2))
@@ -209,14 +209,13 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     def compute_lrmask2localmask(self, left_softmax, right_softmax, triu):
         """ Computes for the local mask on the specified area of the transformer
         
-        Arguments:
-            left_softmax {torch.Tensor} -- result of softmax function on the local left of the tensor
-            right_softmax {torch.Tensor} -- result of softmax function on the local right of the tensor
-            triu {torch.Tensor} -- upper triangular of the local area of the transformer
-            k_right {torch.Tensor} -- key in the local right of the transformer
+            :param torch.Tensor left_softmax: result of softmax function on the local left of the tensor
+            :param torch.Tensor right_softmax: result of softmax function on the local right of the tensor
+            :param torch.Tensor triu: upper triangular of the local area of the transformer
 
-        Returns:
-            local_mask {torch.Tensor} -- local mask for the specified area of the transformer
+            :returns: local mask for the specified area of the transformer
+
+            :rtype: torch.Tensor
         """
         triu_t = triu.transpose(1,2)
         left_mask = torch.matmul(left_softmax, triu)
@@ -232,15 +231,14 @@ class LearnableGlobalLocalMultiheadAttention(nn.Module):
     def forward(self, query, key, shape, value):
         """ Performs the forward pass on the attention module
         
-        Arguments:
-            query {list} -- query value
-            key {list} -- key value
-            shape {list} -- shape of the attention module
-            value {list} -- value of the value
+            :param list query: query value
+            :param list key: key value
+            :param list shape: shape of the attention module
+            :param list value: value of the value
 
-        Returns:
-            attn {torch.Tensor} -- linear transformation of attention values 
-            consistent_mask {torch.Tensor} -- aggregate of all local attention masks
+            :returns:
+                - (:py:class:`torch.Tensor`) - linear transformation of attention values 
+                - (:py:class:`torch.Tensor`) - aggregate of all local attention masks
         """
         tgt_len, bsz, embed_dim = query.size()
         assert embed_dim == self.embed_dim
@@ -310,19 +308,16 @@ class TransformerEncoder(nn.Module):
                 src_key_padding_mask: Optional[Tensor] = None,
                 pos: Optional[Tensor] = None):
         """ Performs the forward pass for the transformer encoder
-            
-        Arguments:
-            src {list} -- input features of the encoder
-            shape {list} -- shape of the encoder
 
-        Keyword Arguments:
-            mask {torch.Tensor} -- mask applied to the input features
-            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
-            pos {torch.Tensor} -- position of the mask
+            :param list src: input features of the encoder
+            :param list shape: shape of the encoder
+            :param torch.Tensor mask: mask applied to the input features
+            :param torch.Tensor src_key_padding_mask: additional padding to be applied to the mask
+            :param torch.Tensor pos: position of the mask
 
-        Returns:
-            list -- output of the encoder after the forward pass
-            list -- feature values of the encoder
+            :returns:
+                - (:py:class:`list`) - output of the encoder after the forward pass
+                - (:py:class:`list`) - feature values of the encoder
         """
         output = src
         features = []
@@ -370,12 +365,12 @@ class TransformerEncoderLayer(nn.Module):
     def with_pos_embed(self, tensor, pos: Optional[Tensor]):
         """ Embeds the specified position on the tensor
         
-        Arguments:
-            tensor {torch.Tensor} -- specified tensor
-            pos {torch.Tensor} -- position to be embedded on the tensor
+            :param torch.Tensor tensor: specified tensor
+            :param torch.Tensor pos: position to be embedded on the tensor
 
-        Returns:
-            torch.Tensor -- tensor with embedded position
+            :returns: Tensor with embedded position
+
+            :rtype: torch.Tensor 
         """
         return tensor if pos is None else tensor + pos
 
@@ -386,18 +381,15 @@ class TransformerEncoderLayer(nn.Module):
                      pos: Optional[Tensor] = None):
         """ Performs normalization after the forward pass
         
-        Arguments:
-            src {list} -- input features of the encoder layer
-            shape {list} -- shape of the encoder layer
+            :param list src: input features of the encoder layer
+            :param list shape: shape of the encoder layer
+            :param torch.Tensor src_mask: mask applied to the input features
+            :param torch.Tensor src_key_padding_mask: additional padding to be applied to the mask
+            :param torch.Tensor pos: position of the mask
 
-        Keyword Arguments:
-            src_mask {torch.Tensor} -- mask applied to the input features
-            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
-            pos {torch.Tensor} -- position of the mask
-
-        Returns:
-            list -- output of the encoder after the forward pass
-            list -- feature values of the encoder layer after applying the mask
+            :returns:
+                - (:py:class:`list`) - output of the encoder after the forward pass
+                - (:py:class:`list`) - feature values of the encoder after applying the mask
         """
         q = k = self.with_pos_embed(src, pos)
 
@@ -418,18 +410,15 @@ class TransformerEncoderLayer(nn.Module):
                     pos: Optional[Tensor] = None):
         """ Performs normalization before the forward pass
         
-        Arguments:
-            src {list} -- input features of the encoder layer
-            shape {list} -- shape of the encoder layer
+            :param list src: input features of the encoder layer
+            :param list shape: shape of the encoder layer
+            :param torch.Tensor src_mask: mask applied to the input features
+            :param torch.Tensor src_key_padding_mask: additional padding to be applied to the mask
+            :param torch.Tensor pos: position of the mask
 
-        Keyword Arguments:
-            src_mask {torch.Tensor} -- mask applied to the input features
-            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
-            pos {torch.Tensor} -- position of the mask
-
-        Returns:
-            list -- output of the encoder after the forward pass
-            list -- feature values of the encoder layer after applying the mask
+            :returns:
+                - (:py:class:`list`) - output of the encoder after the forward pass
+                - (:py:class:`list`) - feature values of the encoder after applying the mask
         """
         src2 = self.norm1(src)
         q = k = self.with_pos_embed(src2, pos)
@@ -448,18 +437,16 @@ class TransformerEncoderLayer(nn.Module):
                 src_key_padding_mask: Optional[Tensor] = None,
                 pos: Optional[Tensor] = None):
         """ Implements the forward pass of the transformer encoder layer
-        
-        Arguments:
-            src {list} -- input features of the encoder layer
-            shape {list} -- shape of the encoder layer
 
-        Keyword Arguments:
-            src_mask {torch.Tensor} -- mask applied to the input features
-            src_key_padding_mask {torch.Tensor} -- additional padding to be applied to the mask
-            pos {torch.Tensor} -- position of the mask
+            :param list src: input features of the encoder layer
+            :param list shape: shape of the encoder layer
+            :param torch.Tensor src_mask: mask applied to the input features
+            :param torch.Tensor src_key_padding_mask: additional padding to be applied to the mask
+            :param torch.Tensor pos: position of the mask
 
-        Returns:
-            Object -- encoder output and feature values after the forward pass
+            :returns: Encoder output and feature values after the forward pass
+
+            :rtype: Object
         """
         if self.normalize_before:
             return self.forward_pre(src, shape, src_mask, src_key_padding_mask, pos)
@@ -530,12 +517,11 @@ class MAN(nn.Module):
     def forward(self, x):
         """ Implements the forward pass of the model
             
-        Arguments:
-            x {list} -- input to the model
+            :param list x: input to the model
 
-        Returns:
-            torch.Tensor -- ReLU transformation of the input
-            list -- updated features of the model
+            :returns:
+                - (:py:class:`torch.Tensor`) - ReLU transformation of the input
+                - (:py:class:`list`) - updated features of the model
         """
         self.features = []
         b, c, h, w = x.shape
@@ -562,10 +548,9 @@ class MAN(nn.Module):
         def get(model, input, output):
             """ Appends the hooks to the model features
             
-            Arguments:
-                model {Object} -- model where the hooks are appended
-                input {list} -- input features of the model
-                output {list} -- output features of the model
+                :param Object model: model where the hooks are appended
+                :param list input: input features of the model
+                :param list output: output features of the model
             """
             # function will be automatically called each time, since the hook is injected
             self.features.append(output.detach())
@@ -586,16 +571,14 @@ def init_MAN():
     return model
 
 def make_layers(cfg, batch_norm=False):
-     """ Creates the layers of the model
+    """ Creates the layers of the model
     
-    Arguments:
-        cfg {list} -- number of channels per layer of the model
+        :param list cfg: number of channels per layer of the model
+        :param boolean batch_norm: whether batch normalization is to be implemented
 
-    Keyword Arguments:
-        batch_norm {bool} -- whether batch normalization is to be implemented
+        :returns: Sequential container storing the layers of the model
 
-    Returns:
-        nn.Sequential -- Sequential container storing the layers of the model
+        :rtype: nn.Sequential
     """
     layers = []
     in_channels = 3

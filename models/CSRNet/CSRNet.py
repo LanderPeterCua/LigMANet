@@ -5,7 +5,7 @@ from torchvision import models
 class CSRNet(nn.Module):
     def __init__(self, load_weights=False):
         """ Initializes a CSRNet object
-        
+
         Keyword Arguments:
             load_weights {boolean} -- whether pretrained weights are to be loaded {default: False}
         """
@@ -25,11 +25,11 @@ class CSRNet(nn.Module):
     def forward(self,x):
         """ Implements a forward pass
         
-        Arguments:
-            x {list} -- input features of the model
-        
-        Returns:
-            list -- updated model features
+            :param list x: input features of the model
+
+            :returns: Updated model features
+
+            :rtype: list
         """
         x = self.frontend(x)
         x = self.backend(x)
@@ -56,10 +56,9 @@ class CSRNet(nn.Module):
         def get(model, input, output):
             """ Appends the hooks to the model features
             
-            Arguments:
-                model {Object} -- model where the hooks are appended
-                input {list} -- input features of the model
-                output {list} -- output features of the model
+                :param Object model: model where the hooks are appended
+                :param list input: input features of the model
+                :param list output: output features of the model
             """
             # function will be automatically called each time, since the hook is injected
             self.features.append(output.detach())
@@ -74,16 +73,14 @@ class CSRNet(nn.Module):
 def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
     """ Creates the layers of the model
     
-    Arguments:
-        cfg {list} -- number of channels per layer of the model
+        :param list cfg: number of channels per layer of the model
+        :param int in_channels: number of input channels
+        :param boolean batch_norm: whether batch normalization is to be implemented
+        :param boolean dilation: whether dilation is to be implemented {default: False}
 
-    Keyword Arguments:
-        in_channels {int} -- number of input channels {default: 3}
-        batch_norm {boolean} -- whether batch normalization is to be implemented {default: False}
-        dilation {boolean} -- whether dilation is to be implemented {default: False}
+        :returns: Sequential container storing the layers of the model
 
-    Returns:
-        nn.Sequential -- Sequential container storing the layers of the model
+        :rtype: nn.Sequential
     """
     if dilation:
         d_rate = 2
