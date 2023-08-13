@@ -55,7 +55,7 @@ def make_layers(cfg, in_channels = 3,batch_norm=False,dilation = False):
         :param list cfg: number of channels per layer of the model
         :param int in_channels: number of input channels
         :param boolean batch_norm: whether batch normalization is to be implemented
-        :param boolean dilation: whether dilation is to be implemented {default: False}
+        :param boolean dilation: whether dilation is to be implemented
 
         :returns: Sequential container storing the layers of the model
 

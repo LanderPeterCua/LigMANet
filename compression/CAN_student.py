@@ -246,7 +246,7 @@ def contextual_forward(feats, scales, bottleneck, relu, weight_net):
         :param list scales: scales of the model
         :param Object bottleneck: bottleneck layer of the model
         :param Object relu: ReLU function to be used on the model
-        :param Object weight_net convolutional layer for creating the weights of the model
+        :param Object weight_net: convolutional layer for creating the weights of the model
 
         :returns: result of the ReLU function on the bottleneck layer
 

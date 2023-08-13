@@ -85,7 +85,7 @@ class Config(object):
         self.num_epochs = 1200            
         self.batch_size = 1    
         self.use_gpu = True
-        self.weights = "weights/MAN-UCFCC50.pth"
+        self.weights = ""
 
         self.compression = True
         self.compression_technique = "Pruning" # [Pruning, SKT]
@@ -239,13 +239,6 @@ def parse_args(config, paths):
                         help='the crop size of the train image')
     parser.add_argument('--downsample-ratio', type=int, default=16,
                         help='downsample ratio')
-    
-    parser.add_argument('--augment-contrast', type=bool, default=True,
-                        help='whether to apply contrast enhancement on images')
-    parser.add_argument('--augment-contrast-factor', type=float, default=0.5,
-                        help='Contrast enhancment factor')
-    parser.add_argument('--augment-save', type=bool, default=True, help='whether to save augmented images')
-    parser.add_argument('--augment-save-location', default="../AugmentDatasets/ShanghaiTechA/", help='save folder of augmented images')
 
     parser.add_argument('--use-background', type=bool, default=True,
                         help='whether to use background modelling')
@@ -264,7 +257,7 @@ def parse_args(config, paths):
     parser.add_argument('--augment-contrast-factor', type=float, default=0.5,
                         help='Contrast enhancement factor')
     parser.add_argument('--augment-save', type=bool, default=True, help='whether to save augmented images')
-    parser.add_argument('--augment-save-location', default="../AugmentDatasets/ShanghaiTechB/", help='save folder of augmented images')
+    parser.add_argument('--augment-save-location', default="", help='save folder of augmented images')
     
     # Model compression
     parser.add_argument('--compression', default = config.compression,
