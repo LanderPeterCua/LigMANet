@@ -61,13 +61,10 @@ class ContextualModule(nn.Module):
         return self.relu(bottle)
 
 # Channel numbers for different channel preservation rates
-channel_nums = [[32, 64, 128, 256],  # half
-                [21, 43, 85, 171],  # third
-                [16, 32, 64, 128],  # quarter
-                [13, 26, 51, 102],  # fifth
-                [43, 86, 171, 342], # 2/3
-                [52, 103, 205, 410], # 4/5
-                [58, 116, 231, 461] # 9/10
+channel_nums = [[52, 103, 205, 410],  # 20% removed (4/5 preservation)
+                [39, 77, 154, 308],  # 40% removed (3/5 preservation)
+                [26, 52, 103, 205],  # 60% removed (2/5 preservation)
+                [13, 26, 52, 103]  # 80% removed (1/5 preservation)
                 ]
 
 class CANNet(nn.Module):
